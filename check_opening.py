@@ -27,17 +27,20 @@ class check_opening():
             #排除週六5:00過後
             if self.__now.weekday() == 5 and self.__now > self.__night_close:
                 return "周六五點過後不開盤"
-            #排除平日非開盤時間
+            # #排除平日非開盤時間
             if self.__now < self.__day_open and self.__now > self.__day_close and self.__now < self.__night_open and self.__now > self.__night_close:
                 return '平日非開盤時間'
-            #排除國定假日
+            # #排除國定假日
             if self.__response.status_code == 200:
                 data = json.loads(self.__response.text)
                 holiday = [item for item in data if item["isHoliday"] is True]
                 today = self.__now.date().strftime("%Y%m%d")
                 for item in holiday:
                     if item['date'] == today:
-                        return '國定假日不開盤'
+                        today = datetime.datetime.now().strftime('%Y-%m-%d')
+                        close = datetime.datetime.strptime(today + " 05:00:00", '%Y-%m-%d %H:%M:%S')
+                        if(self.__now > close):
+                            return '國定假日不開盤'
             return True
         except Exception as err:
             print("An error occurred:", str(err))
