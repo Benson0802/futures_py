@@ -28,9 +28,9 @@ class convertK():
         df.ts = pd.to_datetime(df.ts)
         df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
         
-    def convert_k_bar(self,time_unit):
+    def convert_min_k_bar(self,time_unit):
         '''
-        將歷史分k轉為n分
+        將歷史/即時1分k轉為n分(無法輸入日k，會有偏差)
         '''
         file_path = os.path.join('data', time_unit + '.csv')
         df = pd.read_csv(self.min_path)
@@ -43,7 +43,7 @@ class convertK():
             'Close': 'last',
             'Volume': 'sum'
         }
-        df_data = df.resample(time_unit).apply(ohlc_dict)
+        df_data = df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
         df_data = df_data.dropna()
         df_data.to_csv(file_path)
         print(df_data)

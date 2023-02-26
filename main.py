@@ -31,20 +31,22 @@ if flag is True:
     @api.on_tick_fop_v1()
     def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck = convertK(tick)
-        # ck.convert_k_bar("1Min")
-        # ck.convert_k_bar("5Min")
-        # ck.convert_k_bar("60Min")
+        # ck.convert_min_k_bar("1Min")
+        # ck.convert_min_k_bar("5Min")
+        # ck.convert_min_k_bar("60Min")
 #非開盤時間抓歷史資料
 else:
-    print("目前未開盤!")
+    #print("目前未開盤!")
     # kbars = api.kbars(
     #     contract=api.Contracts.Futures.MXF[code], 
     #     start='2023-01-02',
     #     end='2023-02-25',
     # )
     # ck = convertK(kbars)
-    # ck.convert_k_bar('5Min')
-    # ck.convert_k_bar('60Min')
+    # ck.convert_min_k_bar('5Min')
+    # ck.convert_min_k_bar('15Min')
+    # ck.convert_min_k_bar('30Min')
+    # ck.convert_min_k_bar('60Min')
     
 #threading.Event().wait()
 
