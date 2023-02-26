@@ -2,9 +2,9 @@ import csv
 import shioaji as sj
 from shioaji import TickFOPv1, Exchange
 import threading
-from check_opening import check_opening
+from cls.check_opening import check_opening
 import json
-from convertK import convertK
+from cls.convertK import convertK
 
 obj = check_opening()
 flag = obj.check_date()
@@ -36,6 +36,7 @@ if flag is True:
         # ck.convert_k_bar("60Min")
 #非開盤時間抓歷史資料
 else:
+    print("目前未開盤!")
     # kbars = api.kbars(
     #     contract=api.Contracts.Futures.MXF[code], 
     #     start='2023-01-02',

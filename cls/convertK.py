@@ -26,7 +26,7 @@ class convertK():
     def write_history(self):
         df = pd.DataFrame({**self.tick})
         df.ts = pd.to_datetime(df.ts)
-        df.to_csv(self.tick_path, mode='a', index=False, header=not os.path.exists(self.tick_path))
+        df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
         
     def convert_k_bar(self,time_unit):
         '''
