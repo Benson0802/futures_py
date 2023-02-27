@@ -36,13 +36,14 @@ if flag is True:
         # ck.convert_min_k_bar("60Min")
 #非開盤時間抓歷史資料
 else:
-    #print("目前未開盤!")
-    # kbars = api.kbars(
-    #     contract=api.Contracts.Futures.MXF[code], 
-    #     start='2023-01-02',
-    #     end='2023-02-25',
-    # )
-    # ck = convertK(kbars)
+    print("目前未開盤!")
+    kbars = api.kbars(
+        contract=api.Contracts.Futures.MXF[code], 
+        start='2023-01-02',
+        end='2023-02-25',
+    )
+    ck = convertK(kbars)
+    ck.convert_k_bar("D")
     # ck.convert_min_k_bar('5Min')
     # ck.convert_min_k_bar('15Min')
     # ck.convert_min_k_bar('30Min')

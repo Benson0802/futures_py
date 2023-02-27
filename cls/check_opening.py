@@ -37,10 +37,18 @@ class check_opening():
                 today = self.__now.date().strftime("%Y%m%d")
                 for item in holiday:
                     if item['date'] == today:
-                        today = datetime.datetime.now().strftime('%Y-%m-%d')
-                        close = datetime.datetime.strptime(today + " 05:00:00", '%Y-%m-%d %H:%M:%S')
-                        if(self.__now > close):
-                            return '國定假日不開盤'
+                        date_obj = datetime.datetime.strptime(item['date'], "%Y%m%d").date()
+                        yesterday = date_obj - datetime.timedelta(days=1)
+                        yesterday = datetime.datetime.strftime(yesterday,"%Y%m%d")
+                        for item2 in holiday:
+                            #判斷是否為連假
+                            if(item2['date'] == yesterday):
+                                return '國定假日不開盤'
+                            else:
+                                today = datetime.datetime.now().strftime('%Y-%m-%d')
+                                close = datetime.datetime.strptime(today + " 05:00:00", '%Y-%m-%d %H:%M:%S')
+                                if(self.__now > close):
+                                    return '國定假日不開盤'
             return True
         except Exception as err:
             print("An error occurred:", str(err))
