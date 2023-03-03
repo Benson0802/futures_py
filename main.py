@@ -1,4 +1,3 @@
-import csv
 import shioaji as sj
 from shioaji import TickFOPv1, Exchange
 import threading
@@ -28,27 +27,47 @@ if flag is True:
         quote_type = sj.constant.QuoteType.Tick,
         version = sj.constant.QuoteVersion.v1,
     )
+    
+    now_min = ''
+    tick_min = ''
+    volume = 0
+    amount = []
     @api.on_tick_fop_v1()
     def quote_callback(exchange:Exchange, tick:TickFOPv1):
+        global now_min
+        global tick_min
+        global volume
         ck = convertK(tick)
-        # ck.convert_min_k_bar("1Min")
-        # ck.convert_min_k_bar("5Min")
-        # ck.convert_min_k_bar("60Min")
+        now_min = ck.get_now_min(now_min)
+        tick_min = ck.get_tick_min()
+        if now_min == tick_min:
+            print('收集1分鐘內的tick資料')
+            volume += tick['volume']
+            amount.append(tick['close'])
+            return False
+        else:
+            print('轉為1分k')
+            ck.write_tick(tick_min,volume,amount)
+            now_min = ''
+            volume = 0
+            amount.clear()
+        #ck.convert_k_bar("1Min")
+        
 #非開盤時間抓歷史資料
-else:
-    print("目前未開盤!")
-    kbars = api.kbars(
-        contract=api.Contracts.Futures.MXF[code], 
-        start='2023-01-02',
-        end='2023-02-25',
-    )
-    ck = convertK(kbars)
-    ck.convert_k_bar("D")
+# else:
+#     print("目前未開盤!")
+    # kbars = api.kbars(
+    #     contract=api.Contracts.Futures.MXF[code], 
+    #     start='2023-01-02',
+    #     end='2023-02-25',
+    # )
+    # ck = convertK(kbars)
+    #ck.convert_k_bar("D")
     # ck.convert_min_k_bar('5Min')
     # ck.convert_min_k_bar('15Min')
     # ck.convert_min_k_bar('30Min')
     # ck.convert_min_k_bar('60Min')
     
-#threading.Event().wait()
+threading.Event().wait()
 
-#api.logout()
+api.logout()

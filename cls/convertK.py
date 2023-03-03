@@ -1,27 +1,62 @@
 import pandas as pd
 import os.path
 import csv
+from datetime import datetime,timedelta
 
 class convertK():
     '''
     tick轉換為k棒
     '''
     def __init__(self, tick):
-        # self.datetime = tick['datetime']
-        # self.open = float(tick['open'])
-        # self.high = float(tick['high'])
-        # self.low = float(tick['low'])
-        # self.volume = int(tick['volume'])
-        # self.close = float(tick['close'])
+        self.datetime = pd.to_datetime(tick['datetime'])
+        self.open = float(tick['open'])
+        self.high = float(tick['high'])
+        self.low = float(tick['low'])
+        self.volume = int(tick['volume'])
+        self.close = float(tick['close'])
+        self.amount = float(tick['amount'])
         self.tick_path = 'data/tick.csv'
         self.min_path = 'data/1Min.csv'
-        #self.tick = tick
-        #self.write_tick()
+        self.final_min = ''
+        self.is_last_kline = False
+        self.is_last_kline_write = 0
+        self.tick = tick
     
-    def write_tick(self):
+    def get_now_min(self,now):
+        if now == '':
+            return self.datetime.strftime('%Y/%m/%d %H:%M')
+        else:
+            return now
+            
+        
+    def get_tick_min(self):
+        return self.datetime.strftime('%Y/%m/%d %H:%M')
+    
+    def write_tick(self, tick_min, volume, amount):
         '''
-        將k棒寫入csv
+        將tick寫入1分k
         '''
+        df = pd.DataFrame(amount)
+        df.drop_duplicates(inplace = True)
+        o = df.iloc[0].to_string(index=False)
+        c = df.iloc[-1].to_string(index=False)
+        h = df.max().to_string(index=False)
+        l = df.min().to_string(index=False)
+        tick_min = str(tick_min)+":00"
+        volume = str(volume)
+        file_exists = os.path.isfile(self.min_path)
+        with open(self.min_path, 'a', encoding='utf-8', newline='') as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow(['datetime', 'open', 'high', 'low', 'close', 'volume'])
+            writer.writerow([tick_min, o, h, l, c, volume])
+            print("datetime:"+tick_min)
+            print("open:"+o)
+            print("high:"+h)
+            print("low:"+l)
+            print("close:"+c)
+            print("volume:"+volume)
+        return True
         
     def write_history(self):
         df = pd.DataFrame({**self.tick})
@@ -49,7 +84,7 @@ class convertK():
             df_data = df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
             df_data = df_data.dropna()
             df_data.to_csv(file_path)
-        
+            
     # def convert_k_bar(self,time_unit):
     #     '''
     #     tick轉為k棒
