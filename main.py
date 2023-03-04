@@ -37,7 +37,9 @@ if flag is True:
         global now_min
         global tick_min
         global volume
-        ck = convertK(tick)
+        ck = convertK(tick,True)
+        #寫入csv 比對用
+        ck.write_tick()
         now_min = ck.get_now_min(now_min)
         tick_min = ck.get_tick_min()
         if now_min == tick_min:
@@ -47,27 +49,27 @@ if flag is True:
             return False
         else:
             print('轉為1分k')
-            ck.write_tick(tick_min,volume,amount)
+            ck.write_1k_bar(tick_min,volume,amount)
             now_min = ''
             volume = 0
             amount.clear()
-        #ck.convert_k_bar("1Min")
         
 #非開盤時間抓歷史資料
-# else:
-#     print("目前未開盤!")
-    # kbars = api.kbars(
-    #     contract=api.Contracts.Futures.MXF[code], 
-    #     start='2023-01-02',
-    #     end='2023-02-25',
-    # )
-    # ck = convertK(kbars)
+else:
+    print("目前未開盤!")
+    kbars = api.kbars(
+        contract=api.Contracts.Futures.MXF[code], 
+        start='2023-01-02',
+        end='2023-02-25',
+    )
+    ck = convertK(kbars)
+    ck.write_tick('1Min')
+    ck.convert_k_bar('5Min')
+    ck.convert_k_bar('15Min')
+    ck.convert_k_bar('30Min')
+    ck.convert_k_bar('60Min')
     #ck.convert_k_bar("D")
-    # ck.convert_min_k_bar('5Min')
-    # ck.convert_min_k_bar('15Min')
-    # ck.convert_min_k_bar('30Min')
-    # ck.convert_min_k_bar('60Min')
     
-threading.Event().wait()
+# threading.Event().wait()
 
-api.logout()
+# api.logout()

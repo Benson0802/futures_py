@@ -7,21 +7,19 @@ class convertK():
     '''
     tick轉換為k棒
     '''
-    def __init__(self, tick):
-        self.datetime = pd.to_datetime(tick['datetime'])
-        self.open = float(tick['open'])
-        self.high = float(tick['high'])
-        self.low = float(tick['low'])
-        self.volume = int(tick['volume'])
-        self.close = float(tick['close'])
-        self.amount = float(tick['amount'])
+    def __init__(self, tick, is_history=False):
+        if is_history == True:
+            self.datetime = pd.to_datetime(tick['datetime'])
+            self.open = float(tick['open'])
+            self.high = float(tick['high'])
+            self.low = float(tick['low'])
+            self.volume = int(tick['volume'])
+            self.close = float(tick['close'])
+            self.amount = float(tick['amount'])
         self.tick_path = 'data/tick.csv'
         self.min_path = 'data/1Min.csv'
-        self.final_min = ''
-        self.is_last_kline = False
-        self.is_last_kline_write = 0
         self.tick = tick
-    
+        
     def get_now_min(self,now):
         if now == '':
             return self.datetime.strftime('%Y/%m/%d %H:%M')
@@ -32,7 +30,14 @@ class convertK():
     def get_tick_min(self):
         return self.datetime.strftime('%Y/%m/%d %H:%M')
     
-    def write_tick(self, tick_min, volume, amount):
+    def write_tick(self,time_unit):
+        file_path = os.path.join('data', time_unit + '.csv')
+        dict = {'datetime': self.tick['ts'], 'open': self.tick['Open'], 'high': self.tick['High'],'low': self.tick['Low'], 'close': self.tick['Close']}
+        df = pd.DataFrame(dict)
+        df.datetime = pd.to_datetime(df.datetime)
+        df.to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path))
+    
+    def write_1k_bar(self, tick_min, volume, amount):
         '''
         將tick寫入1分k
         '''
@@ -58,11 +63,6 @@ class convertK():
             print("volume:"+volume)
         return True
         
-    def write_history(self):
-        df = pd.DataFrame({**self.tick})
-        df.ts = pd.to_datetime(df.ts)
-        df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
-        
     def convert_k_bar(self,time_unit):
         '''
         將歷史/即時1分k轉為n分(無法輸入日k，會有偏差)
@@ -72,18 +72,19 @@ class convertK():
         if(time_unit == "D"):
             print("待處理")
         else:
-            df['ts'] = pd.to_datetime(df['ts'])
-            df = df.set_index('ts')
+            df['datetime'] = pd.to_datetime(df['datetime'])
+            df = df.set_index('datetime')
             ohlc_dict = {
-                'Open': 'first',
-                'High': 'max',
-                'Low': 'min',
-                'Close': 'last',
-                'Volume': 'sum'
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum'
             }
             df_data = df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
             df_data = df_data.dropna()
             df_data.to_csv(file_path)
+            print(df_data)
             
     # def convert_k_bar(self,time_unit):
     #     '''
