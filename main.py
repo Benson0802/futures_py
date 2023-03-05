@@ -39,14 +39,14 @@ if flag is True:
         global volume
         ck = convertK(tick,True)
         #寫入csv 比對用
-        ck.write_tick()
+        ck.write_tick("tick")
         now_min = ck.get_now_min(now_min)
         tick_min = ck.get_tick_min()
         if now_min == tick_min:
             print('收集1分鐘內的tick資料')
             volume += tick['volume']
+            if tick['close'] in amount: return
             amount.append(tick['close'])
-            return False
         else:
             print('轉為1分k')
             ck.write_1k_bar(tick_min,volume,amount)
@@ -68,7 +68,7 @@ else:
     # ck.convert_k_bar('15Min')
     # ck.convert_k_bar('30Min')
     # ck.convert_k_bar('60Min')
-    ck.convert_k_bar("D")
+    ck.convert_day_k_bar()
     
 # threading.Event().wait()
 

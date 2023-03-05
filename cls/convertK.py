@@ -47,7 +47,7 @@ class convertK():
         將tick寫入1分k
         '''
         df = pd.DataFrame(amount)
-        df.drop_duplicates(inplace = True)
+        #df.drop_duplicates(inplace = True)
         o = df.iloc[0].to_string(index=False)
         c = df.iloc[-1].to_string(index=False)
         h = df.max().to_string(index=False)
@@ -67,37 +67,60 @@ class convertK():
             print("close:"+c)
             print("volume:"+volume)
         return True
+    
+    def convert_day_k_bar(self):
+        '''
+        將歷史/即時60分k轉為日k
+        '''
+        df = pd.read_csv('data/60Min.csv')
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        index160000 = df.loc[df['datetime'].dt.time == pd.Timestamp('16:00:00').time()].index
+        for idx in index160000:
+            data = df.iloc[idx:idx+20]
+            day = data.datetime.dt.date.iloc[-1]
+            o = round(data['open'].iloc[0])
+            h = round(data['high'].max())
+            l = round(data['low'].min())
+            c = round(data['close'].iloc[-1])
+            v = data['volume'].sum()
+            file_exists = os.path.isfile('data/1Day.csv')
+            #查看是否有20筆資料，沒的話刪掉最後一筆日k
+            if(len(data) < 20):
+                dd = pd.read_csv('data/1Day.csv')
+                dd.drop(dd.index[-1])
+                dd.to_csv('data/1Day.csv',index = False)
+                
+            with open('data/1Day.csv', 'a', encoding='utf-8', newline='') as file:
+                writer = csv.writer(file)
+                if not file_exists:
+                    writer.writerow(['datetime', 'open', 'high', 'low', 'close', 'volume'])
+                writer.writerow([day, o, h, l, c, v])
         
     def convert_k_bar(self,time_unit):
         '''
-        將歷史/即時1分k轉為n分(無法輸入日k，會有偏差)
+        將歷史/即時1分k轉為n分
         '''
-        if(time_unit == "D"):
-            file_path = os.path.join('data', '60Min.csv')
-            df = pd.read_csv(self.min_path)
-            if df["datetime"].str.split(" ").head().str.get(1) == '16:00:00':
-                print(df)
-        else:
-            file_path = os.path.join('data', time_unit + '.csv')
-            df = pd.read_csv(self.min_path)
-            df['datetime'] = pd.to_datetime(df['datetime'])
-            df['open'] = pd.to_numeric(df['open'], downcast='integer')
-            df['high'] = pd.to_numeric(df['high'], downcast='integer')
-            df['low'] = pd.to_numeric(df['low'], downcast='integer')
-            df['close'] = pd.to_numeric(df['close'], downcast='integer')
-            df['volume'] = pd.to_numeric(df['volume'], downcast='integer')
-            df = df.set_index('datetime')
-            ohlc_dict = {
-                'open': 'first',
-                'high': 'max',
-                'low': 'min',
-                'close': 'last',
-                'volume': 'sum'
-            }
-            df_data = df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
-            df_data = df_data.dropna()
-            df_data.to_csv(file_path)
-            print(df_data)
+        file_path = os.path.join('data', time_unit + '.csv')
+        df = pd.read_csv(self.min_path)
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        df['open'] = pd.to_numeric(df['open'], downcast='integer')
+        df['high'] = pd.to_numeric(df['high'], downcast='integer')
+        df['low'] = pd.to_numeric(df['low'], downcast='integer')
+        df['close'] = pd.to_numeric(df['close'], downcast='integer')
+        df['volume'] = pd.to_numeric(df['volume'], downcast='integer')
+        df = df.set_index('datetime')
+        ohlc_dict = {
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }
+        df_data = df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
+        df_data = df_data.dropna()
+        df_data.to_csv(file_path)
+        print(df_data)
+            
             
     # def convert_k_bar(self,time_unit):
     #     '''
