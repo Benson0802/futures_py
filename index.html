@@ -1,0 +1,481 @@
+<!--
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="keywords" content="kline time-line candlestick stock chart canvas k线 行情 蜡烛图 分时图 技术指标 图表" />
+  <meta name="description" content="shape test" />
+  <script type="text/javascript" src="./klinecharts/dist/klinecharts.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="./klinecharts/tests/css/chart.css" />
+  <title>小台指</title>
+  <style>
+    #chart {
+      width: 70%;
+      float: left;
+      background-color: #222222;
+    }
+
+    #table {
+      width: 30%;
+      float: right;
+      color: bisque;
+      background-color: #222222;
+      height: 90vh;
+      /* overflow:scroll;  */
+      overflow-y: auto;
+      font-size: 20px;
+    }
+
+    #table td {
+      padding: 0 5px;
+    }
+
+    #title {
+      position: sticky;
+      top: 0px;
+      background-color: #222222;
+    }
+
+    button {
+      font-size: 30px;
+      margin: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <button onclick="changeKline('1min')">1min</button>
+  <button onclick="changeKline('5min')">5min</button>
+  <button onclick="changeKline('1hour')">1hour</button>
+  <button onclick="changeKline('1day')">1day</button>
+  <button onclick="changeInOut()">開關策略</button>
+  <div id="chart"></div>
+  <div id="table">
+    <table id="report">
+      <tr id="title">
+        <th>time</th>
+        <th>price</th>
+        <th>買賣進出</th>
+        <th>口數</th>
+        <th>收益</th>
+        <th>累計收益</th>
+      </tr>
+    </table>
+  </div>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.1.slim.min.js"
+    integrity="sha256-w8CvhFs7iHNVUtnSP0YKEg00p9Ih13rlL9zGqvLdePA=" crossorigin="anonymous"></script>
+  <script>
+    var show_in_out = true;//顯示進出場
+    var first_create = true;
+    var is_update = true;
+    var file_path_kline = 'data/1Min.csv';
+    var file_path_in_out = 'data/trade.csv';
+    function changeInOut() {
+      show_in_out = !show_in_out;
+      first_create = true;
+      is_update = show_in_out;
+      d3Draw();
+    }
+
+    function changeKline(type) {
+      first_create = true;
+      if (type == '1min') {
+        file_path_kline = 'data/1Min.csv';
+        is_update = true;
+      }
+      if (type == '5min') {
+        file_path_kline = 'data/5Min.csv';
+        is_update = true;
+      }
+      if (type == '1hour') {
+        file_path_kline = 'data/60Min.csv';
+        is_update = true;
+      }
+      /*
+      if (type == '1day') {
+        file_path_kline = 'data/Kline_MTX00_1day.csv';
+        is_update = false;
+      }*/
+      d3Draw();
+    }
+
+    format_change = function (d) {
+      return {
+        timestamp: new Date(d.datetime).getTime(),
+        open: +d.open,
+        high: +d.high,
+        low: +d.low,
+        close: +d.close,
+        volume: +d.volume,
+      };
+    }
+    format_change2 = function (d) {
+      return {
+        timestamp: new Date(d.datetime).getTime(),
+        type: +d.type,//1進場 2出場
+        price: +d.price,
+        lot: +d.lot,
+        total_lot: +d.total_lot,
+        balance: +d.balance,
+        total_balance: +d.total_balance,
+        str_time: d.datetime
+      };
+    }
+    format_change3 = function (d) {
+      return {
+        timestamp: new Date(d.dt).getTime(),
+        hh: +d.hh,
+        hl: +d.hl,
+        ll: +d.ll,
+      };
+    }
+    function annotation_style(time, value, lot, in_or_out, balance, font_size) {
+      color = lot > 0 ? 'red' : 'green';
+      shap = in_or_out == 1 ? 'triangle' : 'circle';
+
+      return {
+        point: { timestamp: time, value: value },
+        styles: {
+          offset: [0, 0],
+          position: 'point',
+          symbol: {
+            type: shap,//circle,rect,diamond,custom,none
+            size: font_size,
+            color: color,
+            activeSize: font_size,
+            activeColor: '#FF9600',
+          }
+        },
+        drawExtend: function ({ ctx, point, coordinate, viewport, isActive, styles }) {
+          text = lot > 0 ? '買' : '賣';
+          text += in_or_out == 1 ? '進' : '出';
+          ctx.font = font_size + 'px normal'
+          ctx.fillStyle = '#78ccff'
+          ctx.fillText(text + value, coordinate.x - 15, coordinate.y + 30)
+          if (isActive) {
+            ctx.fillText(balance, coordinate.x - 15, coordinate.y - 30)
+          }
+        }
+      }
+    }
+    function shape_style(point1, point2) {
+      is_win = point2.price - point1.price > 0 ? 1 : -1;
+      if (point2.lot > 0) {
+        is_win *= -1;
+      }
+      color = is_win == 1 ? 'red' : 'green';
+      return {
+        name: 'segment',
+        points: [
+          { timestamp: point1.timestamp, value: point1.price },
+          { timestamp: point2.timestamp, value: point2.price },
+        ],
+        styles: {
+          line: {
+            color: color,
+            size: 2,
+          },
+        },
+        lock: true,
+        mode: 'weak_magnet',
+      }
+    }
+
+    function d3Draw() {
+      Promise.all([
+        d3.csv(file_path_kline + "?_=" + new Date().getTime(), format_change),//kline
+        d3.csv(file_path_in_out + "?_=" + new Date().getTime(), format_change2), //進出場資料
+        // d3.csv('kline/testttt.csv' + "?_=" + new Date().getTime(), format_change3) //
+      ]).then(function (data) {
+
+        if (first_create) {//第一次執行載入所有資料
+          chart = creatKline(data)
+          first_create = false
+        } else {//更新資料
+          chart.updateData(data[0].pop());//更新最新kline,時間重複就取代
+          if (show_in_out) {
+            v = data[1].pop();
+            chart.createAnnotation(annotation_style(v.timestamp, v.price, v.lot, v.type, v.balance, 20));//更新進出場標記
+          }
+        }
+
+      });
+    }
+    d3Draw()
+
+    setInterval(function () {
+      if (is_update) {
+        d3Draw();
+      }
+    }, 2000)//兩秒更新一次
+
+  </script>
+  <script>
+
+    font_size = 20
+    creatKline = function (kline_data) {
+      dark_style = {
+        grid: {
+          horizontal: {
+            color: '#292929'
+          },
+          vertical: {
+            color: '#292929'
+          }
+        },
+        candle: {
+          margin: {
+            top: 0.2,
+            bottom: 0.1
+          },
+          // 'candle_solid'|'candle_stroke'|'candle_up_stroke'|'candle_down_stroke'|'ohlc'|'area'
+          type: 'candle_solid',
+          bar: {
+            upColor: '#EF5350',
+            downColor: '#26A69A',
+            noChangeColor: '#888888'
+          },
+          area: {
+            lineSize: 2,
+            lineColor: '#2196F3',
+            value: 'close',
+            fillColor: [{
+              offset: 0,
+              color: 'rgba(33, 150, 243, 0.01)'
+            }, {
+              offset: 1,
+              color: 'rgba(33, 150, 243, 0.2)'
+            }]
+          },
+          priceMark: {
+            show: true,
+            high: {
+              show: true,
+              color: '#D9D9D9',
+              textMargin: 5,
+              textSize: font_size,
+              textFamily: 'Helvetica Neue',
+              textWeight: 'normal'
+            },
+            low: {
+              show: true,
+              color: '#D9D9D9',
+              textMargin: 5,
+              textSize: font_size,
+              textFamily: 'Helvetica Neue',
+              textWeight: 'normal',
+            },
+            last: {
+              show: true,
+              upColor: '#26A69A',
+              downColor: '#EF5350',
+              noChangeColor: '#888888',
+              line: {
+                show: true,
+                // 'solid'|'dash'
+                style: 'dash',
+                dashValue: [4, 4],
+                size: 1
+              },
+              text: {
+                show: true,
+                size: font_size,
+                paddingLeft: 2,
+                paddingTop: 2,
+                paddingRight: 2,
+                paddingBottom: 2,
+                color: '#FFFFFF',
+                family: 'Helvetica Neue',
+                weight: 'normal',
+                borderRadius: 2
+              }
+            }
+          },
+          tooltip: {
+            // 'always' | 'follow_cross' | 'none'
+            showRule: 'follow_cross',
+            // 'standard' | 'rect'
+            showType: 'standard',
+            labels: ['時間', '開', '收', '高', '低', '成交量'],
+            values: null,
+            defaultValue: 'n/a',
+            rect: {
+              paddingLeft: 0,
+              paddingRight: 0,
+              paddingTop: 0,
+              paddingBottom: 6,
+              offsetLeft: 8,
+              offsetTop: 8,
+              offsetRight: 8,
+              borderRadius: 4,
+              borderSize: 1,
+              borderColor: '#3f4254',
+              fillColor: 'rgba(17, 17, 17, .3)'
+            },
+            text: {
+              size: font_size,
+              family: 'Helvetica Neue',
+              weight: 'normal',
+              color: '#D9D9D9',
+              marginLeft: 8,
+              marginTop: 6,
+              marginRight: 8,
+              marginBottom: 0
+            }
+          }
+        },
+
+        technicalIndicator: {
+          tooltip: {
+            text: {
+              color: '#929AA5'
+            }
+          }
+        },
+        xAxis: {
+          axisLine: {
+            color: '#333333'
+          },
+          tickLine: {
+            color: '#333333'
+          },
+          tickText: {
+            color: '#929AA5'
+          }
+        },
+        yAxis: {
+          axisLine: {
+            color: '#333333'
+          },
+          tickLine: {
+            color: '#333333'
+          },
+          tickText: {
+            color: '#929AA5'
+          }
+        },
+        separator: {
+          color: '#333333'
+        },
+        crosshair: {
+          horizontal: {
+            line: {
+              color: '#666666'
+            },
+            text: {
+              backgroundColor: '#373a40'
+            }
+          },
+          vertical: {
+            line: {
+              color: '#666666'
+            },
+            text: {
+              backgroundColor: '#373a40'
+            }
+          }
+        }
+      };
+      var chart = klinecharts.init('chart', dark_style)
+      chart.removeTechnicalIndicator();
+      chart.removeAnnotation();
+      chart.removeShape();
+      // chart.createTechnicalIndicator('BOLL', true, { id: 'candle_pane' })
+      chart.addTechnicalIndicatorTemplate(
+        {
+          name: 'MA0',
+          shortName: 'MA0',
+          calcParams: [5, 10, 20],
+          plots: [
+            { key: 'hh', title: '60高', type: 'line' },
+            { key: 'hl', title: '60中', type: 'line' },
+            { key: 'll', title: '60低', type: 'line' },
+          ],
+          // 当计算参数改变时，希望提示的和参数一样，即title的值需要改变
+          regeneratePlots: (params) => {
+            return params.map((p, i) => {
+              return { key: `ma${i + 1}`, title: `MA${p}: `, type: 'line' }
+            })
+          },
+          // 计算结果
+          calcTechnicalIndicator: (kLineDataList, { params, plots }) => {
+            // 注意：返回数据个数需要和kLineDataList的数据个数一致，如果无值，用{}代替即可。
+            // 计算参数最好取回调参数params，如果不是，后续计算参数发生变化的时候，这里计算不能及时响应
+            const closeSums = []
+            return kLineDataList.map((kLineData, i) => {
+              const ma = {}
+              // const close = kLineData.close
+              // params.forEach((param, j) => {
+              //   closeSums[j] = (closeSums[j] || 0) + close
+              //   if (i >= param - 1) {
+              //     // ma[plots[j].key] = closeSums[j] / param
+              //     // closeSums[j] -= kline_data[0][i - (param - 1)].close
+              //   }
+              // })
+              ma['hh'] = kline_data[2][i].hh;
+              ma['ll'] = kline_data[2][i].ll;
+              ma['hl'] = kline_data[2][i].hl;
+              // 如果有值的情况下，这里每一项的数据格式应该是 { ma1: xxx, ma2: xxx }
+              // 每个key需要和plots中的子项key对应的值一致
+              return ma
+            })
+          }
+        },
+        'candle_pane',
+      );
+      // chart.createTechnicalIndicator('MA0', false, { id: 'candle_pane' })
+      // chart.createTechnicalIndicator('MA', false, { id: 'candle_pane' })
+
+      // 创建一个副图指标
+      chart.createTechnicalIndicator({ name: 'VOL', calcParams: [10], styles: { margin: { top: 0.2, bottom: 2 } } }, true, { id: 'bottom_pane0' })
+      var kdjPaneId = chart.createTechnicalIndicator('KDJ', true, { id: 'bottom_pane1' });
+      chart.createTechnicalIndicator('MACD', true, { id: 'bottom_pane2' })
+      chart.applyNewData(kline_data[0])
+      $('#title~tr').remove();
+
+
+      if (show_in_out) {
+        kline_data[1].forEach(function (v) {
+          chart.createAnnotation(annotation_style(v.timestamp, v.price, v.lot, v.type, v.balance, 20));//更新進出場標記
+          type = v.lot > 0 ? '買' : '賣'
+          type += v.type == 1 ? '進' : '出'
+          color = v.lot > 0 ? '#EF5350' : '#26A69A'
+          color2 = v.balance > 0 ? '#EF5350' : '#26A69A'
+          balance = v.balance == 0 ? '' : v.balance;
+          $('#title').after(`<tr><td>${v.str_time}</td><td>${v.price}</td><td style="background-color:${color}">${type}</td><td>${v.lot}</td><td  style="color:${color2}">${balance}</td><td>${v.total_balance}</td></tr>`);
+          if (v.type == 1) {
+            temp = v;
+          }
+          if (v.type == -1) {
+            chart.createShape(shape_style(temp, v));
+          }
+
+        })
+      }
+
+
+
+      return chart;
+    }
+  </script>
+</body>
+
+</html>
