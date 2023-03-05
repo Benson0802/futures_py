@@ -58,17 +58,17 @@ if flag is True:
 else:
     print("目前未開盤!")
     kbars = api.kbars(
-        contract=api.Contracts.Futures.MXF[code], 
-        start='2023-01-02',
-        end='2023-02-25',
+        contract=api.Contracts.Futures.MXF[code],
+        start='2023-01-01',
+        end='2023-03-04',
     )
     ck = convertK(kbars)
-    ck.write_tick('1Min')
-    ck.convert_k_bar('5Min')
-    ck.convert_k_bar('15Min')
-    ck.convert_k_bar('30Min')
-    ck.convert_k_bar('60Min')
-    #ck.convert_k_bar("D")
+    # ck.write_tick('1Min')
+    # ck.convert_k_bar('5Min')
+    # ck.convert_k_bar('15Min')
+    # ck.convert_k_bar('30Min')
+    # ck.convert_k_bar('60Min')
+    ck.convert_k_bar("D")
     
 # threading.Event().wait()
 

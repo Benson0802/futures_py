@@ -32,9 +32,14 @@ class convertK():
     
     def write_tick(self,time_unit):
         file_path = os.path.join('data', time_unit + '.csv')
-        dict = {'datetime': self.tick['ts'], 'open': self.tick['Open'], 'high': self.tick['High'],'low': self.tick['Low'], 'close': self.tick['Close']}
+        dict = {'datetime': self.tick['ts'], 'open': self.tick['Open'], 'high': self.tick['High'],'low': self.tick['Low'], 'close': self.tick['Close'], 'volume':self.tick['Volume']}
         df = pd.DataFrame(dict)
         df.datetime = pd.to_datetime(df.datetime)
+        df.open = pd.to_numeric(df.open, downcast='integer')
+        df.high = pd.to_numeric(df.high, downcast='integer')
+        df.low = pd.to_numeric(df.low, downcast='integer')
+        df.close = pd.to_numeric(df.close, downcast='integer')
+        df.volume = pd.to_numeric(df.volume, downcast='integer')
         df.to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path))
     
     def write_1k_bar(self, tick_min, volume, amount):
@@ -67,12 +72,20 @@ class convertK():
         '''
         將歷史/即時1分k轉為n分(無法輸入日k，會有偏差)
         '''
-        file_path = os.path.join('data', time_unit + '.csv')
-        df = pd.read_csv(self.min_path)
         if(time_unit == "D"):
-            print("待處理")
+            file_path = os.path.join('data', '60Min.csv')
+            df = pd.read_csv(self.min_path)
+            if df["datetime"].str.split(" ").head().str.get(1) == '16:00:00':
+                print(df)
         else:
+            file_path = os.path.join('data', time_unit + '.csv')
+            df = pd.read_csv(self.min_path)
             df['datetime'] = pd.to_datetime(df['datetime'])
+            df['open'] = pd.to_numeric(df['open'], downcast='integer')
+            df['high'] = pd.to_numeric(df['high'], downcast='integer')
+            df['low'] = pd.to_numeric(df['low'], downcast='integer')
+            df['close'] = pd.to_numeric(df['close'], downcast='integer')
+            df['volume'] = pd.to_numeric(df['volume'], downcast='integer')
             df = df.set_index('datetime')
             ohlc_dict = {
                 'open': 'first',
