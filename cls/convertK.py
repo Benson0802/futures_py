@@ -87,8 +87,7 @@ class convertK():
             #查看是否有20筆資料，沒的話刪掉最後一筆日k
             if(len(data) < 20):
                 dd = pd.read_csv('data/1Day.csv')
-                dd.drop(dd.index[-1])
-                dd.to_csv('data/1Day.csv',index = False)
+                dd.update(dd.drop(dd.index[-1]))
                 
             with open('data/1Day.csv', 'a', encoding='utf-8', newline='') as file:
                 writer = csv.writer(file)
