@@ -7,15 +7,15 @@ class convertK():
     '''
     tick轉換為k棒
     '''
-    def __init__(self, tick, is_history=False):
-        if is_history == True:
+    def __init__(self, tick, is_real=False):
+        if is_real == True:
             self.datetime = pd.to_datetime(tick['datetime'])
-            self.open = float(tick['open'])
-            self.high = float(tick['high'])
-            self.low = float(tick['low'])
-            self.volume = int(tick['volume'])
-            self.close = float(tick['close'])
-            self.amount = float(tick['amount'])
+            self.open = pd.Series(tick['open'],dtype='int32')
+            self.high = pd.Series(tick['high'],dtype='int32')
+            self.low = pd.Series(tick['low'],dtype='int32')
+            self.volume = pd.Series(tick['volume'],dtype='int32')
+            self.close = pd.Series(tick['close'],dtype='int32')
+            self.amount = pd.Series(tick['amount'],dtype='int32')
         self.tick_path = 'data/tick.csv'
         self.min_path = 'data/1Min.csv'
         self.tick = tick
@@ -32,14 +32,8 @@ class convertK():
     
     def write_tick(self,time_unit):
         file_path = os.path.join('data', time_unit + '.csv')
-        dict = {'datetime': self.tick['ts'], 'open': self.tick['Open'], 'high': self.tick['High'],'low': self.tick['Low'], 'close': self.tick['Close'], 'volume':self.tick['Volume']}
+        dict = {'datetime': self.datetime, 'open': self.open, 'high': self.high,'low': self.low, 'close': self.close, 'volume':self.volume}
         df = pd.DataFrame(dict)
-        df.datetime = pd.to_datetime(df.datetime)
-        df.open = pd.to_numeric(df.open, downcast='integer')
-        df.high = pd.to_numeric(df.high, downcast='integer')
-        df.low = pd.to_numeric(df.low, downcast='integer')
-        df.close = pd.to_numeric(df.close, downcast='integer')
-        df.volume = pd.to_numeric(df.volume, downcast='integer')
         df.to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path))
     
     def write_1k_bar(self, tick_min, volume, amount):
