@@ -44,13 +44,10 @@ if flag is True:
         tick_min = ck.get_tick_min()
         
         if tick_min == '13:45' or tick_min == '05:00':
-            print('轉為1分k')
-            volume += tick.volume
+            print('最後一盤寫入')
             amount.append(tick.close)
+            volume += tick.volume
             ck.write_1k_bar(tick_min,volume,amount)
-            now_min = ''
-            volume = 0
-            amount.clear()
         
         if now_min == tick_min:
             print('收集1分鐘內的tick資料')
@@ -59,12 +56,11 @@ if flag is True:
             amount.append(tick.close)
         else:
             print('轉為1分k')
-            volume += tick.volume
-            amount.append(tick.close)
             ck.write_1k_bar(tick_min,volume,amount)
             now_min = ''
-            volume = 0
             amount.clear()
+            amount.append(tick.close)
+            volume = tick.volume
         
 #非開盤時間抓歷史資料
 else:
