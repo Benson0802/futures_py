@@ -2,6 +2,7 @@ import pandas as pd
 import os.path
 import csv
 from datetime import datetime,timedelta
+import time
 
 class convertK():
     '''
@@ -25,7 +26,6 @@ class convertK():
             return self.datetime.strftime('%Y/%m/%d %H:%M')
         else:
             return now
-            
         
     def get_tick_min(self):
         return self.datetime.strftime('%Y/%m/%d %H:%M')
@@ -89,18 +89,33 @@ class convertK():
                     writer.writerow(['datetime', 'open', 'high', 'low', 'close', 'volume'])
                 writer.writerow([day, o, h, l, c, v])
         
-    def convert_k_bar(self,time_unit):
+    def write_history_1k_bar(self):
+        '''
+        寫入1分k的歷史資料
+        '''
+        convert_df = pd.DataFrame({**self.tick})
+        convert_df.ts = pd.to_datetime(convert_df.ts)
+        o = pd.Series(convert_df.Open,dtype='int32')
+        h = pd.Series(convert_df.High,dtype='int32')
+        l = pd.Series(convert_df.Low,dtype='int32')
+        c = pd.Series(convert_df.Close,dtype='int32')
+        v = pd.Series(convert_df.Volume,dtype='int32')
+        dict = {'datetime': convert_df.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
+        df = pd.DataFrame(dict)
+        df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
+     
+    def convert_history_k_bar(self,time_unit):
         '''
         將歷史/即時1分k轉為n分
         '''
         file_path = os.path.join('data', time_unit + '.csv')
         df = pd.read_csv(self.min_path)
         df['datetime'] = pd.to_datetime(df['datetime'])
-        df['open'] = pd.to_numeric(df['open'], downcast='integer')
-        df['high'] = pd.to_numeric(df['high'], downcast='integer')
-        df['low'] = pd.to_numeric(df['low'], downcast='integer')
-        df['close'] = pd.to_numeric(df['close'], downcast='integer')
-        df['volume'] = pd.to_numeric(df['volume'], downcast='integer')
+        df['open'] = pd.Series(df['open'], dtype='int32')
+        df['high'] = pd.Series(df['high'], dtype='int32')
+        df['low'] = pd.Series(df['low'], dtype='int32')
+        df['close'] = pd.Series(df['close'], dtype='int32')
+        df['volume'] = pd.Series(df['volume'], dtype='int32')
         df = df.set_index('datetime')
         ohlc_dict = {
             'open': 'first',
@@ -109,11 +124,12 @@ class convertK():
             'close': 'last',
             'volume': 'sum'
         }
-        df_data = df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
+        day_df = df.between_time('8:45', '13:45',include_start=True, include_end=True)
+        night_df = df.between_time('15:00', '05:00',include_start=True, include_end=True)
+        merged_df = pd.concat([day_df, night_df])
+        df_data = merged_df.resample(rule=time_unit,label='right', closed='right').agg(ohlc_dict)
         df_data = df_data.dropna()
         df_data.to_csv(file_path)
-        print(df_data)
-            
             
     # def convert_k_bar(self,time_unit):
     #     '''
