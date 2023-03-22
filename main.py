@@ -44,12 +44,6 @@ if flag is True:
         ck.write_tick("tick")
         now_min = ck.get_now_min(now_min)
         tick_min = ck.get_tick_min()
-        #df = pd.read_csv('data/1Min.csv')
-        #df['datetime'] = pd.to_datetime(df['datetime'])
-        #dt = pd.to_datetime(tick.datetime).strftime('%H:%M')
-        #index160000 = df.loc[df['datetime'].dt.time == dt.time()].index
-        #print(df['datetime'].dt.time)
-        #print(dt.time())
         if now_min > '05:00' and now_min < '08:45': return
         if now_min == tick_min:
             print('收集1分鐘內的tick資料')
@@ -71,6 +65,10 @@ if flag is True:
             amount.clear()
             amount.append(tick.close)
             volume = tick.volume
+            ck.convert_k_bar('5Min')
+            ck.convert_k_bar('15Min')
+            ck.convert_k_bar('30Min')
+            ck.convert_k_bar('60Min')
         
 #非開盤時間抓歷史資料
 else:
@@ -80,11 +78,12 @@ else:
         end='2023-03-18',
     )
     ck = convertK(kbars)
-    #ck.write_history_1k_bar()
-    #ck.convert_k_bar('5Min')
-    #ck.convert_k_bar('15Min')
-    #ck.convert_k_bar('30Min')
+    ck.write_history_1k_bar()
+    ck.convert_k_bar('5Min')
+    ck.convert_k_bar('15Min')
+    ck.convert_k_bar('30Min')
+    ck.convert_k_bar('60Min')
     ck.convert_day_k_bar()
     
-# threading.Event().wait()
-# api.logout()
+threading.Event().wait()
+api.logout()

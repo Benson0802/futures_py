@@ -117,19 +117,29 @@ class convertK():
                 df = pd.DataFrame(dict)
                 df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
      
-    def convert_k_bar(self,min):
+    def convert_k_bar(self,minutes):
         '''
         把1分k轉為5分k，即時歷史共用(5根1分k=1根5分k，所以抓取1-5，6-10依序壓縮，同時判斷是否已存在)
         '''
-        minNumber = min.replace('Min', '')
-        file_path = os.path.join('data', min + '.csv')
+        # 判斷是否已經到轉換時間
+        minute = int(minutes.replace('Min', ''))
+        current_time = int(datetime.now().time().strftime("%M"))
+        if minute == 5 and current_time % 5 != 0:
+            return
+        elif minute == 15 and current_time != 15:
+            return
+        elif minute == 30 and current_time != 30:
+            return
+        elif minute == 60 and current_time != 00:
+            return
+        file_path = os.path.join('data', minutes + '.csv')
         try:
             last_row = pd.read_csv(file_path, index_col='datetime').iloc[-1]
             last_index = pd.to_datetime(last_row.name)
             last_values = list(last_row.values)
         except:
             last_index = pd.to_datetime('1900-01-01')
-            last_values = [None]*minNumber
+            last_values = [None]*minute
 
         df_1k = pd.read_csv(self.min_path)
         df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
@@ -146,9 +156,10 @@ class convertK():
             df1 = df_1k.between_time('08:46', '15:00')
             df1 = df1[df1.index > last_index]  # 排除重複的資料
             # 篩選15:01到23:59以及00:01到05:00的資料
-            df2 = df_1k.between_time('15:01', '23:59').append(df_1k.between_time('00:01', '05:00'))
+            #df2 = df_1k.between_time('15:01', '23:59').append(df_1k.between_time('00:01', '05:00'))
+            df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:01', '05:00')])
             df2 = df2[df2.index > last_index]  # 排除重複的資料
-            resampled_df = pd.concat([df1, df2]).resample(min, closed='right', label='right').apply(hlc_dict).dropna()
+            resampled_df = pd.concat([df1, df2]).resample(minutes, closed='right', label='right').apply(hlc_dict).dropna()
             # 將讀取到的最後一筆資料加入到result之前
             if last_index in resampled_df.index:
                 resampled_df.loc[last_index] = last_values
@@ -183,7 +194,8 @@ class convertK():
             df1 = df_1k.between_time('08:46', '13:45')
             df1 = df1[df1.index > last_index]  # 排除重複的資料
             # 篩選15:00到23:59以及00:00到05:00的資料
-            df2 = df_1k.between_time('15:00', '23:59').append(df_1k.between_time('00:00', '05:00'))
+            #df2 = df_1k.between_time('15:00', '23:59').append(df_1k.between_time('00:00', '05:00'))
+            df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:01', '05:00')])
             df2 = df2[df2.index >= last_index]  # 排除重複的資料
             resampled_df1 = df1.resample('5Min', closed='right', label='right').apply(hlc_dict).dropna()
             resampled_df2 = df2.resample('5Min', closed='right', label='right').apply(hlc_dict).dropna()
