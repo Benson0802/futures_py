@@ -11,9 +11,9 @@ class check_opening():
         self.__now = datetime.datetime.now()
         self.__tomorrow = self.__now + datetime.timedelta(days=1)
         self.__day_open = datetime.datetime(self.__now.year, self.__now.month, self.__now.day, 8, 45)
-        self.__day_close = datetime.datetime(self.__now.year, self.__now.month, self.__now.day, 13, 45)
+        self.__day_close = datetime.datetime(self.__now.year, self.__now.month, self.__now.day, 13, 46)
         self.__night_open = datetime.datetime(self.__now.year, self.__now.month, self.__now.day, 15, 0)
-        self.__night_close = datetime.datetime(self.__tomorrow.year, self.__tomorrow.month, self.__tomorrow.day, 5, 0)
+        self.__night_close = datetime.datetime(self.__tomorrow.year, self.__tomorrow.month, self.__tomorrow.day, 5, 1)
         self.__response = requests.get("https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/{0}.json".format(self.__now.year),timeout=60)
 
     def check_date(self):

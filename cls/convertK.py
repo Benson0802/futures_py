@@ -93,7 +93,8 @@ class convertK():
         df_real = pd.DataFrame({**self.tick})
         df_real.ts = pd.to_datetime(df_real.ts)
         num_rows = sum(1 for line in open(self.min_path))
-        df_1k = pd.read_csv(self.min_path,skiprows=num_rows-1)
+        df_1k = pd.read_csv(self.min_path, skiprows=num_rows-1, header=None, parse_dates=[0])
+        df_1k.columns = ['datetime', 'open', 'high', 'low', 'close', 'volume']
         df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
         # 沒任何資料時直接寫入
         if df_1k.empty and len(df_1k) == 0:
@@ -107,64 +108,71 @@ class convertK():
             df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
         else:
             #有資料時判斷最後一筆是否重覆再寫入
-            if df_real.isin({'ts': [df_1k.iloc[-1]['datetime']]}) is False:
-                o = pd.Series(df_real.Open,dtype='int32')
-                h = pd.Series(df_real.High,dtype='int32')
-                l = pd.Series(df_real.Low,dtype='int32')
-                c = pd.Series(df_real.Close,dtype='int32')
-                v = pd.Series(df_real.Volume,dtype='int32')
-                dict = {'datetime': df_real.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
-                df = pd.DataFrame(dict)
-                df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
-     
+            if df_real.ts.isin([df_1k.iloc[-1]['datetime']]).any() is False:
+                df_real = df_real.drop_duplicates(subset=['ts'], keep='last')
+            o = pd.Series(df_real.Open,dtype='int32')
+            h = pd.Series(df_real.High,dtype='int32')
+            l = pd.Series(df_real.Low,dtype='int32')
+            c = pd.Series(df_real.Close,dtype='int32')
+            v = pd.Series(df_real.Volume,dtype='int32')
+            dict = {'datetime': df_real.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
+            df = pd.DataFrame(dict)
+            df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
+
     def convert_k_bar(self,minutes):
         '''
-        把1分k轉為5分k，即時歷史共用(5根1分k=1根5分k，所以抓取1-5，6-10依序壓縮，同時判斷是否已存在)
+        把1分k轉為n分k，即時歷史共用
         '''
-        # 判斷是否已經到轉換時間
-        minute = int(minutes.replace('Min', ''))
         current_time = int(datetime.now().time().strftime("%M"))
-        if minute == 5 and current_time % 5 != 0:
-            return
-        elif minute == 15 and current_time != 15:
-            return
-        elif minute == 30 and current_time != 30:
-            return
-        elif minute == 60 and current_time != 00:
-            return
+        # 讀取要轉換的檔案中最新的一筆k
         file_path = os.path.join('data', minutes + '.csv')
-        try:
+        df = pd.read_csv(file_path, index_col='datetime')
+        last_row = None
+        last_index = None
+        if not df.empty:
             last_row = pd.read_csv(file_path, index_col='datetime').iloc[-1]
             last_index = pd.to_datetime(last_row.name)
-            last_values = list(last_row.values)
-        except:
-            last_index = pd.to_datetime('1900-01-01')
-            last_values = [None]*minute
-
+        # 讀取1分k
         df_1k = pd.read_csv(self.min_path)
         df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
         df_1k.set_index('datetime', inplace=True)
-        hlc_dict = {
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum'
-        }
         if set(['close', 'high', 'low', 'open', 'volume']).issubset(df_1k.columns):
-            # 篩選08:46到15:00的資料
-            df1 = df_1k.between_time('08:46', '15:00')
-            df1 = df1[df1.index > last_index]  # 排除重複的資料
+            hlc_dict = {
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum'
+            }
+            # 篩選08:45到15:00的資料
+            if minutes == '30Min':
+                df1 = df_1k.between_time('08:45', '13:45').resample(rule=minutes, offset='15min', closed='right', label='right').apply(hlc_dict).dropna()
+            elif minutes == '60Min':
+                df1 = df_1k.between_time('08:45', '13:45').resample(rule=minutes, offset='45min', closed='right', label='right').apply(hlc_dict).dropna()
+            else:
+                df1 = df_1k.between_time('08:45', '13:45').resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
+                
             # 篩選15:01到23:59以及00:01到05:00的資料
-            #df2 = df_1k.between_time('15:01', '23:59').append(df_1k.between_time('00:01', '05:00'))
-            df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:01', '05:00')])
-            df2 = df2[df2.index > last_index]  # 排除重複的資料
-            resampled_df = pd.concat([df1, df2]).resample(minutes, closed='right', label='right').apply(hlc_dict).dropna()
-            # 將讀取到的最後一筆資料加入到result之前
-            if last_index in resampled_df.index:
-                resampled_df.loc[last_index] = last_values
-            result = resampled_df
-            result.to_csv(file_path, mode='a', header=False, index_label='datetime')
+            df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:01', '05:00')]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
+            resampled_df = df2.combine_first(df1)
+            # 過濾掉 last_row 之前的資料
+            if last_row != None:
+                resampled_df = resampled_df.loc[last_index:]
+                # 移除舊的lase資料
+                df = pd.read_csv(file_path, index_col='datetime')
+                last_index = pd.to_datetime(last_row.name)
+                df.index = pd.to_datetime(df.index)
+                df.drop(labels=[last_index.to_pydatetime()], inplace=True)
+                df.to_csv(file_path, index_label='datetime')
+            
+            print('現在時間')
+            print(current_time)
+            resampled_df['open'] = pd.Series(resampled_df['open'],dtype='int32')
+            resampled_df['high'] = pd.Series(resampled_df['high'],dtype='int32')
+            resampled_df['low'] = pd.Series(resampled_df['low'],dtype='int32')
+            resampled_df['close'] = pd.Series(resampled_df['close'],dtype='int32')
+            resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
+            resampled_df.to_csv(file_path, mode='a', header=False)
                 
     def convert_history_k_bar(self,time_unit):
         '''

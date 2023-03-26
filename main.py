@@ -5,7 +5,6 @@ from cls.check_opening import check_opening
 import json
 from cls.convertK import convertK
 import time
-import pandas as pd
 
 obj = check_opening()
 flag = obj.check_date()
@@ -44,20 +43,18 @@ if flag is True:
         ck.write_tick("tick")
         now_min = ck.get_now_min(now_min)
         tick_min = ck.get_tick_min()
-        if now_min > '05:00' and now_min < '08:45': return
-        if now_min == tick_min:
+        if now_min > '05:01' and now_min < '08:45': return
+        now_time = time.strftime("%H:%M", time.localtime())
+        if now_min == tick_min or now_time == "05:00" or now_time == "13:46":
             print('收集1分鐘內的tick資料')
             volume += tick.volume
             if tick.close in amount: return
             amount.append(tick.close)
-            #5:00或13:45寫入
-            now_time = time.strftime("%H:%M", time.localtime())
-            if now_time == "05:00" or now_time == "13:45":
-                print('轉為1分k')
-                ck.write_1k_bar(now_time,volume,amount)
-                now_min = ''
-                amount.clear()
-                volume = 0
+            print('轉為1分k')
+            ck.write_1k_bar("05:00",volume,amount)
+            now_min = ''
+            amount.clear()
+            volume = 0
         else:
             print('轉為1分k')
             ck.write_1k_bar(tick_min,volume,amount)
@@ -74,16 +71,16 @@ if flag is True:
 else:
     kbars = api.kbars(
         contract=api.Contracts.Futures.MXF.MXFR1,
-        start='2022-02-01',
-        end='2023-03-18',
+        start='2023-03-20',
+        end='2023-03-25',
     )
     ck = convertK(kbars)
-    ck.write_history_1k_bar()
-    ck.convert_k_bar('5Min')
-    ck.convert_k_bar('15Min')
-    ck.convert_k_bar('30Min')
-    ck.convert_k_bar('60Min')
-    ck.convert_day_k_bar()
+    #ck.write_history_1k_bar()
+    #ck.convert_k_bar('5Min')
+    #ck.convert_k_bar('15Min')
+    #ck.convert_k_bar('30Min')
+    #ck.convert_k_bar('60Min')
+    # ck.convert_day_k_bar()
     
-threading.Event().wait()
-api.logout()
+# threading.Event().wait()
+# api.logout()
