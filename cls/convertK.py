@@ -42,11 +42,11 @@ class convertK():
         將tick寫入1分k
         '''
         df = pd.DataFrame(amount)
-        o = df.iloc[0].to_string(index=False)
-        c = df.iloc[-1].to_string(index=False)
-        h = df.max().to_string(index=False)
-        l = df.min().to_string(index=False)
-        tick_min = str(tick_min)+":00"
+        o = pd.Series(df.iloc[0],dtype='int32')
+        c = pd.Series(df.iloc[-1],dtype='int32')
+        h = pd.Series(df.max(),dtype='int32')
+        l = pd.Series(df.min(),dtype='int32')
+        tick_min = pd.to_datetime(str(tick_min)+":00")
         volume = str(volume)
         file_exists = os.path.isfile(self.min_path)
         with open(self.min_path, 'a', encoding='utf-8', newline='') as file:
@@ -66,25 +66,39 @@ class convertK():
         '''
         將歷史/即時60分k轉為日k
         '''
-        df = pd.read_csv('data/60Min.csv')
-        df['datetime'] = pd.to_datetime(df['datetime'])
-        index160000 = df.loc[df['datetime'].dt.time == pd.Timestamp('16:00:00').time()].index
-        for idx in index160000:
-            data = df.iloc[idx:idx+20]
+        #讀取日k最後一筆
+        file_path = os.path.join('data', '1Day.csv')
+        df_day = pd.read_csv(file_path, index_col='datetime')
+        last_row = None
+        last_index = None
+        if not df_day.empty:
+            last_row = pd.read_csv(file_path, index_col='datetime').iloc[-1]
+            last_index = pd.to_datetime(last_row.name).date()
+
+        #讀取一分k
+        df_1k = pd.read_csv(self.min_path)
+        df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
+        index1440 = df_1k.loc[df_1k['datetime'].dt.time == pd.Timestamp('15:01:00').time()].index
+        for idx in index1440:
+            data = df_1k.iloc[idx:idx+1140]
             day = data.datetime.dt.date.iloc[-1]
-            o = round(data['open'].iloc[0])
-            h = round(data['high'].max())
-            l = round(data['low'].min())
-            c = round(data['close'].iloc[-1])
+            o = pd.Series(data['open'].iloc[0],dtype='int32')
+            h = pd.Series(data['high'].max(),dtype='int32')
+            l = pd.Series(data['low'].min(),dtype='int32')
+            c = pd.Series(data['close'].iloc[-1],dtype='int32')
             v = data['volume'].sum()
-            file_exists = os.path.isfile('data/1Day.csv')
-            #查看是否有20筆資料，沒的話刪掉最後一筆日k
-            if(len(data) == 20):               
-                with open('data/1Day.csv', 'a', encoding='utf-8', newline='') as file:
+            # 過濾掉 last_row 之前的資料
+            if not last_row.empty:
+                # 移除舊的lase資料
+                df = pd.read_csv(file_path, index_col='datetime')
+                last_index = pd.to_datetime(last_row.name).normalize().date()
+                df.index = pd.to_datetime(df.index).date
+                df = df.drop(labels=[last_index], axis=0)
+                df.to_csv(file_path, index_label='datetime')
+
+            with open(file_path, 'a', encoding='utf-8', newline='') as file:
                     writer = csv.writer(file)
-                    if not file_exists:
-                        writer.writerow(['datetime', 'open', 'high', 'low', 'close', 'volume'])
-                    writer.writerow([day, o, h, l, c, v])
+                    writer.writerow([day, o.item(), h.item(), l.item(), c.item(), v])
         
     def write_history_1k_bar(self):
         '''

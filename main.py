@@ -45,16 +45,21 @@ if flag is True:
         tick_min = ck.get_tick_min()
         if now_min > '05:01' and now_min < '08:45': return
         now_time = time.strftime("%H:%M", time.localtime())
-        if now_min == tick_min or now_time == "05:00" or now_time == "13:46":
+        if now_min == tick_min or now_time == "05:00" or now_time == "13:45":
             print('收集1分鐘內的tick資料')
             volume += tick.volume
             if tick.close in amount: return
             amount.append(tick.close)
-            print('轉為1分k')
-            ck.write_1k_bar("05:00",volume,amount)
-            now_min = ''
-            amount.clear()
-            volume = 0
+            if now_time == "05:00" or now_time == "13:45":
+                print('轉為1分k')
+                ck.write_1k_bar("05:00",volume,amount)
+                now_min = ''
+                amount.clear()
+                volume = 0
+                ck.convert_k_bar('5Min')
+                ck.convert_k_bar('15Min')
+                ck.convert_k_bar('30Min')
+                ck.convert_k_bar('60Min')
         else:
             print('轉為1分k')
             ck.write_1k_bar(tick_min,volume,amount)
@@ -80,7 +85,7 @@ else:
     #ck.convert_k_bar('15Min')
     #ck.convert_k_bar('30Min')
     #ck.convert_k_bar('60Min')
-    # ck.convert_day_k_bar()
+    ck.convert_day_k_bar()
     
 # threading.Event().wait()
 # api.logout()
