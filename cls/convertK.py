@@ -53,13 +53,8 @@ class convertK():
             writer = csv.writer(file)
             if not file_exists:
                 writer.writerow(['datetime', 'open', 'high', 'low', 'close', 'volume'])
-            writer.writerow([tick_min, o, h, l, c, volume])
-            print("datetime:"+tick_min)
-            print("open:"+o)
-            print("high:"+h)
-            print("low:"+l)
-            print("close:"+c)
-            print("volume:"+volume)
+            writer.writerow([tick_min, o.item(), h.item(), l.item(), c.item(), volume])
+            print("datetime: " + str(tick_min)+"open: " + str(o)+"high: " + str(h)+"low: " + str(l)+"close: " + str(c)+"volume: " + str(volume))
         return True
     
     def convert_day_k_bar(self):
@@ -170,7 +165,7 @@ class convertK():
             df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:01', '05:00')]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
             resampled_df = df2.combine_first(df1)
             # 過濾掉 last_row 之前的資料
-            if last_row != None:
+            if last_row.any():
                 resampled_df = resampled_df.loc[last_index:]
                 # 移除舊的lase資料
                 df = pd.read_csv(file_path, index_col='datetime')
@@ -186,6 +181,8 @@ class convertK():
             resampled_df['low'] = pd.Series(resampled_df['low'],dtype='int32')
             resampled_df['close'] = pd.Series(resampled_df['close'],dtype='int32')
             resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
+            print('轉為'+str(minutes))
+            print('open:'+str(resampled_df['open'])+'high:'+str(resampled_df['high'])+'low:'+str(resampled_df['low'])+'close:'+str(resampled_df['close'])+'volume:'+str(resampled_df['volume']))
             resampled_df.to_csv(file_path, mode='a', header=False)
                 
     def convert_history_k_bar(self,time_unit):

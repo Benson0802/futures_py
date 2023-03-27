@@ -87,5 +87,5 @@ else:
     #ck.convert_k_bar('60Min')
     ck.convert_day_k_bar()
     
-# threading.Event().wait()
-# api.logout()
+threading.Event().wait()
+api.logout()
