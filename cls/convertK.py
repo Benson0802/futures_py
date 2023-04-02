@@ -59,7 +59,7 @@ class convertK():
     
     def convert_day_k_bar(self):
         '''
-        將歷史/即時60分k轉為日k
+        將歷史/即時1k轉為日k
         '''
         #讀取日k最後一筆
         file_path = os.path.join('data', '1Day.csv')
@@ -75,7 +75,6 @@ class convertK():
         index1440 = df_1k.loc[df_1k['datetime'].dt.time == pd.Timestamp('15:01:00').time()].index
         for idx in index1440:
             data = df_1k.iloc[idx:idx+1140]
-            print(data)
             day = data.datetime.dt.date.iloc[-1]
             o = pd.Series(data['open'].iloc[0],dtype='int32')
             h = pd.Series(data['high'].max(),dtype='int32')

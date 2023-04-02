@@ -26,7 +26,7 @@ try:
     now_min = ''
     tick_min = ''
     volume = 0
-    has_order = False
+    has_order = False #是否有單
     amount = []
     #開盤時間抓tick
     if flag is True:
@@ -55,8 +55,8 @@ try:
                 volume += tick.volume
                 if tick.close in amount: return
                 amount.append(tick.close)
-                # ord = order(tick.close,has_order)
-                # ord.strategy()
+                ord = order(tick.close,has_order)
+                has_order = ord.strategy1()
                 now_time = time.strftime("%H:%M", time.localtime())
                 if now_time == "05:00" or now_time == "13:45":
                     print('5點')
@@ -97,7 +97,8 @@ try:
         ck.convert_k_bar('30Min')
         ck.convert_k_bar('60Min')
         ck.convert_day_k_bar()
-
+        
+        
     if flag == True:
         threading.Event().wait()
         api.logout()
@@ -108,6 +109,7 @@ except:
     now_time = time.strftime("%H:%M", time.localtime())
     if now_time == "05:00" or now_time == "13:45":
         if len(amount) > 0:
+            ck = convertK(kbars)
             ck.write_1k_bar("05:00",volume,amount)
             now_min = ''
             amount.clear()
