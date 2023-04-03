@@ -114,18 +114,17 @@ class convertK():
             df = pd.DataFrame(dict)
             df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
         else:
-            #有資料時判斷最後一筆是否重覆再寫入
+            #有資料時判斷最後一筆是否重覆，有重覆就不寫入了
             if df_real.ts.isin([df_1k.iloc[-1]['datetime']]).any() is False:
-                df_real = df_real.drop_duplicates(subset=['ts'], keep='last')
-            o = pd.Series(df_real.Open,dtype='int32')
-            h = pd.Series(df_real.High,dtype='int32')
-            l = pd.Series(df_real.Low,dtype='int32')
-            c = pd.Series(df_real.Close,dtype='int32')
-            v = pd.Series(df_real.Volume,dtype='int32')
-            dict = {'datetime': df_real.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
-            df = pd.DataFrame(dict)
-            df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
-
+                o = pd.Series(df_real.Open,dtype='int32')
+                h = pd.Series(df_real.High,dtype='int32')
+                l = pd.Series(df_real.Low,dtype='int32')
+                c = pd.Series(df_real.Close,dtype='int32')
+                v = pd.Series(df_real.Volume,dtype='int32')
+                dict = {'datetime': df_real.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
+                df = pd.DataFrame(dict)
+                df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
+            
     def convert_k_bar(self,minutes):
         '''
         把1分k轉為n分k，即時歷史共用
