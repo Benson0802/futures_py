@@ -98,18 +98,19 @@ try:
         ck.convert_k_bar('60Min')
         ck.convert_day_k_bar()
         
-        
     if flag == True:
         threading.Event().wait()
         api.logout()
-except:
+        
+except Exception as err:
     print('5點')
+    print(err)
     print(volume)
     print(amount)
     now_time = time.strftime("%H:%M", time.localtime())
     if now_time == "05:00" or now_time == "13:45":
         if len(amount) > 0:
-            ck = convertK(kbars)
+            ck = convertK(amount[0])
             ck.write_1k_bar("05:00",volume,amount)
             now_min = ''
             amount.clear()
