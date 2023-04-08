@@ -9,14 +9,16 @@ class order():
     '''
     建立在一口單的進出
     '''
-    def __init__(self,close,has_order):
+    def __init__(self,close,has_order,volume):
         self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
         self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
+        self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
         self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
         self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
         self.df_trade = pd.read_csv('data/trade.csv', index_col='datetime')
         self.has_order = has_order
-        self.close = close
+        self.close = int(close)
+        self.volume = int(volume)
         self.loss = 10 #損失幾點出場
         self.balance = 0 #賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
@@ -24,33 +26,63 @@ class order():
         
     def strategy1(self):
         '''
-        策略1:用前一筆15分k帶入波浪理論中的比率值來取得最高最低
-        H2~H3放空或出場，突破h3或-10點出場
-        L2~L3出掉或進場，跌破l3或-10點出場
+        策略1:用前一日高低差帶入費波南希列數計算高低值
         '''
-        print('進入策略1:波浪理論')
-        df_15Min = self.df_15Min.iloc[-1]
-        h3 = math.ceil(df_15Min['high'] + (df_15Min['high'] - df_15Min['low']) * 4.236)
-        l3 = math.floor(df_15Min['low'] - (df_15Min['high'] - df_15Min['low']) * 4.236)
-        h2 = math.ceil(df_15Min['high'] + (df_15Min['high'] - df_15Min['low']) * 2.618)
-        l2 = math.floor(df_15Min['low'] - (df_15Min['high'] - df_15Min['low']) * 2.618)
-        h1 = math.ceil(df_15Min['high'] + (df_15Min['high'] - df_15Min['low']) * 1.618)
-        l1 = math.floor(df_15Min['low'] - (df_15Min['high'] - df_15Min['low']) * 1.618)
-        h = math.ceil(df_15Min['high'] + (df_15Min['high'] - df_15Min['low']) * 0.618)
-        l = math.floor(df_15Min['low'] - (df_15Min['high'] - df_15Min['low']) * 0.618)
+        print('進入策略1:費波南希列數')
+        fc_data = self.fibonacci()
+        print(fc_data)
         #判斷有單或沒單
-        if self.has_order is True: #有單的話判斷買進或放空，並比較現價是否達停損或決定是否出場
-            self.has_order = self.check_loss(df_15Min)
-                                        
-        else: #沒單的話判斷現在價位是否達H2~H3或L2~L2來決定是否買進或放空
-            if self.close >= h2 and self.close <= h3: #價格在高檔時
+        if self.has_order is True: #有單的話判斷出場
+            self.has_order = self.check_loss()
+        else: #沒單的話從前一日高點低點開始
+            #前一日高點視為壓力(誤差容許值五點)
+            if self.close in range(fc_data['h4']-5, fc_data['h4']):
+                print('現價:'+str(self.close))
+                print('高價-5:'+str(fc_data['h4']-5))
+                print('高價:'+str(fc_data['h4']))
                 self.total_lot = 1
                 self.trade(1,-1) #買進空單
                 self.has_order = True
-            elif self.close <= l2 and self.close >= l3: #價格在低檔時
+            #空方最後防守區(誤差容許值五點)
+            elif self.close in range(fc_data['h5']-5, fc_data['h5']):
+                print('現價:'+str(self.close))
+                print('高價-5:'+str(fc_data['h5']-5))
+                print('高價:'+str(fc_data['h5']))
+                self.total_lot = 1
+                self.trade(1,-1) #買進空單
+                self.has_order = True
+            #多方滿足點(誤差容許值五點)
+            elif self.close in range(fc_data['h8']-5, fc_data['h8']):
+                print('現價:'+str(self.close))
+                print('高價-5:'+str(fc_data['h8']-5))
+                print('高價:'+str(fc_data['h8']))
+                self.total_lot = 1
+                self.trade(1,-1) #買進空單
+                self.has_order = True
+            #前一日最低點(誤差容許值五點)
+            elif self.close in range(fc_data['l4'], fc_data['l4']+5):
+                print('現價:'+str(self.close))
+                print('低價:'+str(fc_data['l4']))
+                print('低價+5:'+str(fc_data['l4']+5))
                 self.total_lot = 1
                 self.trade(1,1) #買進多單
-                self.has_order = False
+                self.has_order = True
+            #空方最後防守區(誤差容許值五點)
+            elif self.close in range(fc_data['l5'], fc_data['l5']+5):
+                print('現價:'+str(self.close))
+                print('低價:'+str(fc_data['l5']))
+                print('低價+5:'+str(fc_data['l5']+5))
+                self.total_lot = 1
+                self.trade(1,1) #買進多單
+                self.has_order = True
+            #空方滿足區(誤差容許值五點)
+            elif self.close in range(fc_data['l8'], fc_data['l8']+5):
+                print('現價:'+str(self.close))
+                print('低價:'+str(fc_data['l8']))
+                print('低價+5:'+str(fc_data['l8']+5))
+                self.total_lot = 1
+                self.trade(1,1) #買進多單
+                self.has_order = True
                 
         return self.has_order
     
@@ -62,7 +94,7 @@ class order():
         trend = self.check_trend(df_60Min)
         trend = -1
         is_2b = self.check_2b(df_60Min,trend)
-
+        
         if self.has_order is False: #沒單才進場
             if trend == 1: #上升趨勢買進
                 if is_2b:
@@ -75,36 +107,102 @@ class order():
             else:
                 print('條件不成立繼續龜!')
         else:#有單判斷是否停損
-            self.has_order = self.check_loss(df_60Min)
+            self.has_order = self.check_loss()
         
         return self.has_order
-     
-    def check_loss(self,df):
+    
+    def check_ps(self,minute):
+        '''
+        判斷各分k的支撐及壓力，依傳入的分鐘數來判斷，取20筆來判斷，常用的分鐘數為5分或60分
+        '''
+        how = 20
+        df = None
+        if minute == 5:
+            df = self.df_5Min.tail(how)
+        elif minute == 15:
+            df = self.df_15Min.tail(how)
+        elif minute == 30:
+            df = self.df_30Min.tail(how)
+        elif minute == 60:
+            df = self.df_60Min.tail(how)
+            
+        # 取得最近一段時間內的最高和最低價格
+        high = df['close'].max()
+        low = df['close'].min()
+        data = {'high':high,'low':low}
+        
+        print("壓力:", high)
+        print("支撐:", low)
+        return data
+    
+    def check_loss(self):
         '''
         判斷停損及停利，依傳入的分k計算高低點停利
         '''
-        h3 = math.ceil(df['high'] + (df['high'] - df['low']) * 4.236)
-        l3 = math.floor(df['low'] - (df['high'] - df['low']) * 4.236)
-        h2 = math.ceil(df['high'] + (df['high'] - df['low']) * 2.618)
-        l2 = math.floor(df['low'] - (df['high'] - df['low']) * 2.618)
+        fc_data = self.fibonacci()
         if self.df_trade.empty is False:
             df_trade = self.df_trade.iloc[-1]
             if len(df_trade) > 0:
                 if df_trade['type'] == 1: #多單/空單的處理
                     self.total_lot = 0
                     if df_trade['lot'] == 1: #有多單的處理
-                        #收盤價 < 買進價格-10點 =>停損 或 格在高檔時停利
-                        if (self.close < (df_trade['price'] - self.loss)) or (self.close >= h2 and self.close <= h3):
+                        #收盤價 < 買進價格-10點
+                        if (self.close < (df_trade['price'] - self.loss)):
                             self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                            print('多單停損')
                             self.trade(-1,-1) #多單停損
                             return False
+                        #滿足點h8回補，容許值10點
+                        elif self.close in range(fc_data['h8']-10, fc_data['h8']):
+                            self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                            print('多單停利')
+                            self.trade(-1,-1) #多單停利
+                            return False
+                        else:
+                            print('等~~')
                     elif df_trade['lot'] == -1: #空單的處理
-                        #收盤價 > 放空價格+10點 停損 或 價格在低檔時停利 
-                        if (self.close > (df_trade['price'] + self.loss)) or (self.close <= l2 and self.close >= l3): 
+                        #收盤價 > 放空價格+10點停損 
+                        if (self.close > (df_trade['price'] + self.loss)): 
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                            print('空單停損')
                             self.trade(-1, 1) #空單回補
                             return False
-                            
+                        # 滿足點l7回補，容許值10點
+                        elif self.close in range(fc_data['l7'], fc_data['l7']+10):
+                            self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                            print('空單停利')
+                            self.trade(-1, 1) #空單停利
+                            return False
+                        else:
+                            print('等~~')
+                            return True
+    def fibonacci(self):
+        '''
+        用前一日開盤價帶入費波南希列數取得各級價差
+        '''
+        df_1day = self.df_1day.iloc[-2]
+        ed = df_1day['high'] - df_1day['low'] #計算高低差
+        data = {
+            'h8':df_1day['high'] + ed * 1,#過高倍數1
+            'h7':math.ceil(df_1day['high'] + ed * 0.75),#過高倍數0.75
+            'h6':math.ceil(df_1day['high'] + ed * 0.5),#過高倍數0.5
+            'h5':math.ceil(df_1day['high'] + ed * 0.382),#過高倍數0.382(空方最後防守點)
+            'h4':df_1day['high'],#前一日最高點
+            'h3':math.ceil(ed*0.764+df_1day['low']),#扭轉空翻多
+            'h2':math.ceil(ed/3*2+df_1day['low']),#3分之2
+            'h1':math.ceil(ed*0.618+df_1day['low']),#高點0.618(空方防守點)
+            'un':math.ceil(ed*0.5+df_1day['low']),#中值(多空互換區)
+            'l1':math.ceil(ed*0.382+df_1day['low']),#高點0.382(多方防守點)
+            'l2':math.ceil(ed/3+df_1day['low']),#3分之1'
+            'l3':math.ceil(ed*0.236+df_1day['low']),#扭轉多翻空
+            'l4':df_1day['low'], #前一日最低點
+            'l5':math.ceil(df_1day['low']-ed*0.382),#過低倍數0.382(多方最後防守點)
+            'l6':math.ceil(df_1day['low']-ed*0.5),#過低倍數0.5
+            'l7':math.ceil(df_1day['low']-ed*0.75),#過低倍數0.75
+            'l8':df_1day['low']-ed*1 #過低倍數1  
+        }
+        return data
+        
     def check_2b(self,df_60Min,trend):
         '''
         2b法則判斷
@@ -130,9 +228,12 @@ class order():
                     low_points = []
                 elif df_60Min['low'][i] == df_60Min['low'][i-1] and low_flag:
                     low_points.append(df_60Min['low'][i])
-
+            print('上升趨勢做多')
+            print('現價:'+str(self.close))
+            print('前低+5:'+str(last_low+5))
+            print('前高-5:'+str(last_low-5))
             # 判斷是否符合 2B 條件
-            if self.close >= last_low:
+            if self.close >= int(last_low+5) and self.close <= int(last_low-5):
                 return True
 
         elif trend == -1:
@@ -155,7 +256,11 @@ class order():
                     high_points.append(df_60Min['high'][i])
 
             # 判斷是否符合 2B 條件
-            if self.close <= last_high:
+            print('下降趨勢放空')
+            print('現價:'+str(self.close))
+            print('前高+5:'+str(last_high+5))
+            print('前高-5:'+str(last_high-5))
+            if int(self.close) >= int(last_high-5) and int(self.close) <= int(last_high+5):
                 return True
 
         return False
@@ -200,6 +305,14 @@ class order():
         type 1:進場 -1:出場
         lot 1:買 -1:賣
         '''
+        if type == 1 and lot == 1:
+            print('買多')
+        elif type == 1 and lot == -1:
+            print('放空')
+        elif type == -1 and lot == 1:
+            print('空單回補')
+        elif type == -1 and lot == -1:
+            print('多單賣出')
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.total_balance = self.total_balance + self.balance
         with open('data/trade.csv', 'a', encoding='utf-8', newline='') as file:
@@ -213,14 +326,14 @@ class order():
         串接line訊息
         '''
         msg = datetime+' | '
-        if lot > 0 :
-            msg += '買'
-        if lot < 0 :
-            msg += '賣'
         if type == 1:
-            msg += '進'
+            msg += '買'
         if type == -1:
-            msg += '出'
+            msg += '賣'
+        if lot == 1:
+            msg += '多'
+        if lot == -1 :
+            msg += '空'
         msg += ' | '+str(price)
         if total_lot == 0:
             msg += ' | 平倉 | 收入:'

@@ -54,7 +54,6 @@ class convertK():
             if not file_exists:
                 writer.writerow(['datetime', 'open', 'high', 'low', 'close', 'volume'])
             writer.writerow([tick_min, o.item(), h.item(), l.item(), c.item(), volume])
-            print("datetime: " + str(tick_min)+"open: " + str(o)+"high: " + str(h)+"low: " + str(l)+"close: " + str(c)+"volume: " + str(volume))
         return True
     
     def convert_day_k_bar(self):
@@ -88,10 +87,9 @@ class convertK():
                     if last_index in df_day.index:
                         df_day.drop(labels=[last_index], inplace=True)
                         df_day.to_csv(file_path, index_label='datetime')
-
-            with open(file_path, 'a', encoding='utf-8', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([day, o.item(), h.item(), l.item(), c.item(), v])
+                with open(file_path, 'a', encoding='utf-8', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow([day, o.item(), h.item(), l.item(), c.item(), v])
         
     def write_history_1k_bar(self):
         '''
@@ -115,7 +113,7 @@ class convertK():
             df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
         else:
             #有資料時判斷最後一筆是否重覆，有重覆就不寫入了
-            if df_real.ts.isin([df_1k.iloc[-1]['datetime']]).any() is False:
+            if df_real.ts.isin([df_1k.iloc[-1]['datetime']]).any() == False:
                 o = pd.Series(df_real.Open,dtype='int32')
                 h = pd.Series(df_real.High,dtype='int32')
                 l = pd.Series(df_real.Low,dtype='int32')
@@ -171,15 +169,11 @@ class convertK():
                 df.drop(labels=[last_index.to_pydatetime()], inplace=True)
                 df.to_csv(file_path, index_label='datetime')
             
-            print('現在時間')
-            print(current_time)
             resampled_df['open'] = pd.Series(resampled_df['open'],dtype='int32')
             resampled_df['high'] = pd.Series(resampled_df['high'],dtype='int32')
             resampled_df['low'] = pd.Series(resampled_df['low'],dtype='int32')
             resampled_df['close'] = pd.Series(resampled_df['close'],dtype='int32')
             resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
-            print('轉為'+str(minutes))
-            print('open:'+str(resampled_df['open'])+'high:'+str(resampled_df['high'])+'low:'+str(resampled_df['low'])+'close:'+str(resampled_df['close'])+'volume:'+str(resampled_df['volume']))
             resampled_df.to_csv(file_path, mode='a', header=False)
                 
     def convert_history_k_bar(self,time_unit):
