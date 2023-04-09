@@ -56,6 +56,7 @@ try:
                 ord = order(tick.close,has_order,volume)
                 has_order = ord.strategy1()
                 #has_order = ord.strategy2()
+                #has_order = ord.strategy3()
                 now_time = time.strftime("%H:%M", time.localtime())
                 if now_time == "05:00" or now_time == "13:45":
                     print('5點')
@@ -85,8 +86,6 @@ try:
             
     #非開盤時間抓歷史資料
     else:
-        # ord = order(15635,True,3306)
-        # has_order = ord.strategy1()
         kbars = api.kbars(
             contract=api.Contracts.Futures.MXF.MXFR1,
             start='2023-04-03',
