@@ -63,7 +63,7 @@ class convertK():
         #讀取日k最後一筆
         localtime = time.localtime()
         now = time.strftime("%H:%M", localtime)
-        if now == '13:45':#時間到再寫入
+        if now >= '13:45' and now <= '13:46':#時間到再寫入
             file_path = os.path.join('data', '1Day.csv')
             df_day = pd.read_csv(file_path, index_col='datetime')
             last_row = None

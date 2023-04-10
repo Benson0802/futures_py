@@ -104,7 +104,8 @@ class order():
         '''
         trend = self.check_trend(60)
         is_2b = self.check_2b(trend,60)
-
+        print('目前趨勢:'+str(trend))
+        print('是否2b:'+str(is_2b))
         if self.has_order is False: #沒單才進場
             if trend == 1: #上升趨勢買進
                 if is_2b: #符合2b
@@ -129,25 +130,32 @@ class order():
         if self.has_order is False: #沒單才進場
             ps = self.get_ps(60)
             if self.close in range(ps['high'], ps['high']+10):
+                print('現價:'+str(self.close))
+                print("h:"+str(ps['high']))
+                print('hh:'+str(ps['high']+10))
                 #睡一秒後判斷是否為假突破
                 time.sleep(1)
-                is_fo = self.check_fo(5)
-                if is_fo == True:
-                    self.trade(1, -1) #買進空單
-                    self.has_order = True       
-            elif self.close in range(ps['low']-10, ps['high']):
+                #is_fo = self.check_fo(5)
+                #if is_fo == True:
+                self.trade(1, -1) #買進空單
+                self.has_order = True       
+            elif self.close in range(ps['low']-10, ps['low']):
+                print('現價:'+str(self.close))
+                print("l:"+str(ps['low']-10))
+                print('ll:'+str(ps['low']))
                 #睡一秒後判斷是否為破底翻
                 time.sleep(1)
-                is_bto = self.check_bto(5)
-                if is_bto == True:
-                    self.trade(1, 1) #買進多單
-                    self.has_order = True
+                #is_bto = self.check_bto(5)
+                #if is_bto == True:
+                self.trade(1, 1) #買進多單
+                self.has_order = True
             else:
                 print('條件不成立繼續龜!')
                 
         else:#有單判斷是否停損
             #is_burst = self.check_volume()
             self.has_order = self.check_loss()
+        return self.has_order
     
     def check_fo(self,minute):
         '''
@@ -394,6 +402,7 @@ class order():
         elif minute == 60:
             df = self.df_60Min.tail(self.how)
         # 計算每波的最低點
+        
         min_points = []
         min_price = float('inf')
         for i in range(len(df)):
@@ -407,14 +416,13 @@ class order():
         y = [p[1] for p in min_points]
         z = np.polyfit(x, y, 1)
         p = np.poly1d(z)
-
         # 計算最新一根 K 棒的位置
         last_price = df.iloc[-1]['close']
         last_index = len(df) - 1
 
         # 計算上升趨勢線的值
         trend_value = p(last_index)
-
+        
         # 判斷趨勢
         if last_price > trend_value:#目前為上升趨勢
             return 1

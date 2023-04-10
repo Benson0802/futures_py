@@ -54,10 +54,10 @@ try:
                 if tick.close in amount: return
                 amount.append(tick.close)
                 ord = order(tick.close,has_order,volume)
-                has_order = ord.strategy1()
+                #has_order = ord.strategy1()
                 print('是否有單:'+str(has_order))
                 #has_order = ord.strategy2()
-                #has_order = ord.strategy3()
+                has_order = ord.strategy3()
                 now_time = time.strftime("%H:%M", time.localtime())
                 if now_time == "05:00" or now_time == "13:45":
                     print('5點')
