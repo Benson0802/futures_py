@@ -61,35 +61,39 @@ class convertK():
         將歷史/即時1k轉為日k
         '''
         #讀取日k最後一筆
-        file_path = os.path.join('data', '1Day.csv')
-        df_day = pd.read_csv(file_path, index_col='datetime')
-        last_row = None
-        last_index = None
-        if not df_day.empty:
-            last_row = df_day.iloc[-1]
-            last_index = pd.to_datetime(last_row.name).date()
-        #讀取一分k
-        df_1k = pd.read_csv(self.min_path)
-        df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
-        index1440 = df_1k.loc[df_1k['datetime'].dt.time == pd.Timestamp('15:01:00').time()].index
-        for idx in index1440:
-            data = df_1k.iloc[idx:idx+1140]
-            day = data.datetime.dt.date.iloc[-1]
-            o = pd.Series(data['open'].iloc[0],dtype='int32')
-            h = pd.Series(data['high'].max(),dtype='int32')
-            l = pd.Series(data['low'].min(),dtype='int32')
-            c = pd.Series(data['close'].iloc[-1],dtype='int32')
-            v = data['volume'].sum()
-            #如果日k已有資料則比對日k最後一筆進行替換，如果沒資料直接寫入
-            if last_row is not None:
-                if day == last_index:
-                    df_day.index = pd.to_datetime(df_day.index).date
-                    if last_index in df_day.index:
-                        df_day.drop(labels=[last_index], inplace=True)
-                        df_day.to_csv(file_path, index_label='datetime')
-                with open(file_path, 'a', encoding='utf-8', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow([day, o.item(), h.item(), l.item(), c.item(), v])
+        localtime = time.localtime()
+        now = time.strftime("%H:%M", localtime)
+        if now == '13:45':#時間到再寫入
+            file_path = os.path.join('data', '1Day.csv')
+            df_day = pd.read_csv(file_path, index_col='datetime')
+            last_row = None
+            last_index = None
+            if not df_day.empty:
+                last_row = df_day.iloc[-1]
+                last_index = pd.to_datetime(last_row.name).date()
+            #讀取一分k
+            df_1k = pd.read_csv(self.min_path)
+            df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
+            index1440 = df_1k.loc[df_1k['datetime'].dt.time == pd.Timestamp('15:01:00').time()].index
+            for idx in index1440:
+                data = df_1k.iloc[idx:idx+1140]
+                day = data.datetime.dt.date.iloc[-1]
+                o = pd.Series(data['open'].iloc[0],dtype='int32')
+                h = pd.Series(data['high'].max(),dtype='int32')
+                l = pd.Series(data['low'].min(),dtype='int32')
+                c = pd.Series(data['close'].iloc[-1],dtype='int32')
+                v = data['volume'].sum()
+                #如果日k已有資料則比對日k最後一筆進行替換，如果沒資料直接寫入
+                if last_row.any() is not None:
+                    if day == last_index:
+                        print('進入日k')
+                        df_day.index = pd.to_datetime(df_day.index).date
+                        if last_index in df_day.index:
+                            df_day.drop(labels=[last_index], inplace=True)
+                            df_day.to_csv(file_path, index_label='datetime')
+                    with open(file_path, 'a', encoding='utf-8', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerow([day, o.item(), h.item(), l.item(), c.item(), v])
         
     def write_history_1k_bar(self):
         '''

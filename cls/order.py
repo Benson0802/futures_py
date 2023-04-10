@@ -34,61 +34,68 @@ class order():
         '''
         print('進入策略1:費波南希列數')
         fc_data = self.fibonacci()
-        is_burst = self.check_volume()
+        print(fc_data)
+        print(self.close)
+        # is_burst = self.check_volume()
         #判斷有單或沒單
-        if self.has_order is True: #有單的話判斷出場
-            self.has_order = self.check_loss(is_burst)
+        if self.has_order == True: #有單的話判斷出場
+            self.has_order = self.check_loss()
         else: #沒單的話從前一日高點低點開始
-            if is_burst == True:
-                #前一日高點視為壓力(誤差容許值五點)
-                if self.close in range(fc_data['h4']-5, fc_data['h4']):
-                    print('現價:'+str(self.close))
-                    print('高價-5:'+str(fc_data['h4']-5))
-                    print('高價:'+str(fc_data['h4']))
-                    self.total_lot = 1
-                    self.trade(1,-1) #買進空單
-                    self.has_order = True
-                #空方最後防守區(誤差容許值五點)
-                elif self.close in range(fc_data['h5']-5, fc_data['h5']):
-                    print('現價:'+str(self.close))
-                    print('高價-5:'+str(fc_data['h5']-5))
-                    print('高價:'+str(fc_data['h5']))
-                    self.total_lot = 1
-                    self.trade(1,-1) #買進空單
-                    self.has_order = True
-                #多方滿足點(誤差容許值五點)
-                elif self.close in range(fc_data['h8']-5, fc_data['h8']):
-                    print('現價:'+str(self.close))
-                    print('高價-5:'+str(fc_data['h8']-5))
-                    print('高價:'+str(fc_data['h8']))
-                    self.total_lot = 1
-                    self.trade(1,-1) #買進空單
-                    self.has_order = True
-                #前一日最低點(誤差容許值五點)
-                elif self.close in range(fc_data['l4'], fc_data['l4']+5):
-                    print('現價:'+str(self.close))
-                    print('低價:'+str(fc_data['l4']))
-                    print('低價+5:'+str(fc_data['l4']+5))
-                    self.total_lot = 1
-                    self.trade(1,1) #買進多單
-                    self.has_order = True
-                #空方最後防守區(誤差容許值五點)
-                elif self.close in range(fc_data['l5'], fc_data['l5']+5):
-                    print('現價:'+str(self.close))
-                    print('低價:'+str(fc_data['l5']))
-                    print('低價+5:'+str(fc_data['l5']+5))
-                    self.total_lot = 1
-                    self.trade(1,1) #買進多單
-                    self.has_order = True
-                #空方滿足區(誤差容許值五點)
-                elif self.close in range(fc_data['l8'], fc_data['l8']+5):
-                    print('現價:'+str(self.close))
-                    print('低價:'+str(fc_data['l8']))
-                    print('低價+5:'+str(fc_data['l8']+5))
-                    self.total_lot = 1
-                    self.trade(1,1) #買進多單
-                    self.has_order = True
-                
+            # if is_burst == True:
+            #前一日高點視為壓力(誤差容許值五點)
+            if self.close in range(fc_data['h4']-5, fc_data['h4']):
+                print('現價:'+str(self.close))
+                print('高價-5:'+str(fc_data['h4']-5))
+                print('高價:'+str(fc_data['h4']))
+                self.total_lot = 1
+                self.trade(1,-1) #買進空單
+                self.has_order = True
+            #空方最後防守區(誤差容許值五點)
+            elif self.close in range(fc_data['h5']-5, fc_data['h5']):
+                print('if=3')
+                print('現價:'+str(self.close))
+                print('高價-5:'+str(fc_data['h5']-5))
+                print('高價:'+str(fc_data['h5']))
+                self.total_lot = 1
+                self.trade(1,-1) #買進空單
+                self.has_order = True
+            #多方滿足點(誤差容許值五點)
+            elif self.close in range(fc_data['h8']-5, fc_data['h8']):
+                print('if=4')
+                print('現價:'+str(self.close))
+                print('高價-5:'+str(fc_data['h8']-5))
+                print('高價:'+str(fc_data['h8']))
+                self.total_lot = 1
+                self.trade(1,-1) #買進空單
+                self.has_order = True
+            #前一日最低點(誤差容許值五點)
+            elif self.close in range(fc_data['l4'], fc_data['l4']+5):
+                print('if=5')
+                print('現價:'+str(self.close))
+                print('低價:'+str(fc_data['l4']))
+                print('低價+5:'+str(fc_data['l4']+5))
+                self.total_lot = 1
+                self.trade(1,1) #買進多單
+                self.has_order = True
+            #空方最後防守區(誤差容許值五點)
+            elif self.close in range(fc_data['l5'], fc_data['l5']+5):
+                print('if=6')
+                print('現價:'+str(self.close))
+                print('低價:'+str(fc_data['l5']))
+                print('低價+5:'+str(fc_data['l5']+5))
+                self.total_lot = 1
+                self.trade(1,1) #買進多單
+                self.has_order = True
+            #空方滿足區(誤差容許值五點)
+            elif self.close in range(fc_data['l8'], fc_data['l8']+5):
+                print('if=7')
+                print('現價:'+str(self.close))
+                print('低價:'+str(fc_data['l8']))
+                print('低價+5:'+str(fc_data['l8']+5))
+                self.total_lot = 1
+                self.trade(1,1) #買進多單
+                self.has_order = True
+                  
         return self.has_order
     
     def strategy2(self):
@@ -110,8 +117,8 @@ class order():
             else:
                 print('條件不成立繼續龜!')
         else:#有單判斷是否停損
-            is_burst = self.check_volume()
-            self.has_order = self.check_loss(is_burst)
+            #is_burst = self.check_volume()
+            self.has_order = self.check_loss()
         
         return self.has_order
     
@@ -139,8 +146,8 @@ class order():
                 print('條件不成立繼續龜!')
                 
         else:#有單判斷是否停損
-            is_burst = self.check_volume()
-            self.has_order = self.check_loss(is_burst)
+            #is_burst = self.check_volume()
+            self.has_order = self.check_loss()
     
     def check_fo(self,minute):
         '''
@@ -232,7 +239,7 @@ class order():
         print("支撐:", low)
         return data
     
-    def check_loss(self,is_burst):
+    def check_loss(self):
         '''
         判斷停損及停利，依傳入的分k計算高低點停利
         '''
@@ -257,6 +264,7 @@ class order():
                             return False
                         else:
                             print('等~~')
+                            return self.has_order
                     elif df_trade['lot'] == -1: #空單的處理
                         #收盤價 > 放空價格+10點停損 
                         if (self.close > (df_trade['price'] + self.loss)): 
@@ -271,8 +279,8 @@ class order():
                             self.trade(-1, 1) #空單停利
                             return False
                         else:
-                            print('等~~')
-                            return True
+                            print('等~~'+str(self.has_order))
+                            return self.has_order
     def fibonacci(self):
         '''
         用前一日開盤價帶入費波南希列數取得各級價差

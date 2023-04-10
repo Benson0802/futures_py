@@ -55,6 +55,7 @@ try:
                 amount.append(tick.close)
                 ord = order(tick.close,has_order,volume)
                 has_order = ord.strategy1()
+                print('是否有單:'+str(has_order))
                 #has_order = ord.strategy2()
                 #has_order = ord.strategy3()
                 now_time = time.strftime("%H:%M", time.localtime())
