@@ -4,8 +4,9 @@ import csv
 from datetime import datetime
 import cls.notify as lineMeg
 import numpy as np
-import ta
 import time
+from scipy.stats import linregress
+import matplotlib.pyplot as plt
 
 class order():
     '''
@@ -26,16 +27,16 @@ class order():
         self.balance = 0 #賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
         self.total_lot = 0 #目前部位
-        self.how = 20 #取幾根k做判斷
+        self.how = 100 #取幾根k做判斷
         
     def strategy1(self):
         '''
-        策略1:用前一日高低差帶入費波南希列數計算高低值
+        策略1:依傳入的頻率k棒帶入黃金分割率計算目標價
         '''
-        print('進入策略1:費波南希列數')
+        print('進入策略1:黃金分割率')
         fc_data = self.fibonacci()
         print(fc_data)
-        print(self.close)
+        print('現價:'+self.close)
         # is_burst = self.check_volume()
         #判斷有單或沒單
         if self.has_order == True: #有單的話判斷出場
@@ -102,26 +103,28 @@ class order():
         '''
         道式理論123及2b法則，停損則是跌破上升趨勢或下降趨勢
         '''
-        trend = self.check_trend(60)
-        is_2b = self.check_2b(trend,60)
-        print('目前趨勢:'+str(trend))
-        print('是否2b:'+str(is_2b))
-        if self.has_order is False: #沒單才進場
-            if trend == 1: #上升趨勢買進
-                if is_2b: #符合2b
-                    self.trade(1, 1) #買進多單
-                    self.has_order = True
-            elif trend == -1: #下降趨勢放空
-                if is_2b: #符合2b
-                    self.trade(1, -1) #買進空單
-                    self.has_order = True
-            else:
-                print('條件不成立繼續龜!')
-        else:#有單判斷是否停損
-            #is_burst = self.check_volume()
-            self.has_order = self.check_loss()
+        self.check_trend(1)
+        exit()
+        # trend = self.check_trend(60)
+        # is_2b = self.check_2b(trend,60)
+        # print('目前趨勢:'+str(trend))
+        # print('是否2b:'+str(is_2b))
+        # if self.has_order is False: #沒單才進場
+        #     if trend == 1: #上升趨勢買進
+        #         if is_2b: #符合2b
+        #             self.trade(1, 1) #買進多單
+        #             self.has_order = True
+        #     elif trend == -1: #下降趨勢放空
+        #         if is_2b: #符合2b
+        #             self.trade(1, -1) #買進空單
+        #             self.has_order = True
+        #     else:
+        #         print('條件不成立繼續龜!')
+        # else:#有單判斷是否停損
+        #     #is_burst = self.check_volume()
+        #     self.has_order = self.check_loss()
         
-        return self.has_order
+        # return self.has_order
     
     def strategy3(self):
         '''
@@ -157,72 +160,118 @@ class order():
             self.has_order = self.check_loss()
         return self.has_order
     
-    def check_fo(self,minute):
+    def check_trend(self,minute):
         '''
-        檢查是否發生假突破
-        '''
-        df = None
-        if minute == 1:
-            df = self.df_1Min.tail(self.how)
-        elif minute == 5:
-            df = self.df_5Min.tail(self.how)
-        elif minute == 15:
-            df = self.df_15Min.tail(self.how)
-        elif minute == 30:
-            df = self.df_30Min.tail(self.how)
-        elif minute == 60:
-            df = self.df_60Min.tail(self.how)
-            
-        # 計算均線及rsi
-        df['ma'] = ta.trend.sma_indicator(df['close'], window=20)
-        df['rsi'] = ta.momentum.rsi(df['close'], window=14)
-        # 判断是否为假突破
-        if df['close'][0] > df['ma'][0] and df['close'][1] < df['ma'][1] and df['rsi'][1] > 70 and df['volume'][1] < df['volume'].rolling(20).mean()[1]:
-            print('假突破')
-            return True
-        else:
-            print('非假突破')
-            return False
-            
-    def check_bto(self,minute):
-        '''
-        檢查是否發生破底翻
+        判斷趨勢
         '''
         df = None
         if minute == 1:
-            df = self.df_1Min.tail(self.how)
+            df = self.df_1Min.tail(self.how).reset_index(drop=False)
         elif minute == 5:
-            df = self.df_5Min.tail(self.how)
+            df = self.df_5Min.tail(self.how).reset_index(drop=False)
         elif minute == 15:
-            df = self.df_15Min.tail(self.how)
+            df = self.df_15Min.tail(self.how).reset_index(drop=False)
         elif minute == 30:
-            df = self.df_30Min.tail(self.how)
+            df = self.df_30Min.tail(self.how).reset_index(drop=False)
         elif minute == 60:
-            df = self.df_60Min.tail(self.how)
+           df = self.df_60Min.tail(self.how).reset_index(drop=False)
+           
+        df_n = df.reset_index()
+        reg_up = linregress(x = df_n.index,y = df_n.close)
+        up_line = reg_up[1] + reg_up[0] * df_n.index
+        df_temp_low = df_n[df_n["close"] < up_line]
+        df_temp_high = df_n[df_n["close"] > up_line]
+
+        while len(df_temp_low) >= 5 :
+            reg_low = linregress(x = df_temp_low.index,y = df_temp_low.close)
+            up_line_low = reg_low[1] + reg_low[0] * df_n.index
+            df_temp_low = df_n[df_n["close"] < up_line_low]
+
+        while len(df_temp_high) >= 5 :
+            reg_high = linregress(x = df_temp_high.index,y = df_temp_high.close)
+            up_line_high = reg_high[1] + reg_high[0] * df_n.index
+            df_temp_high = df_n[df_n["close"] > up_line_high]
+
+        df_n["low_trend"] = reg_low[1] + reg_low[0] * df_n.index
+        df_n["high_trend"] = reg_high[1] + reg_high[0] * df_n.index
+        
+        plt.plot(df_n["close"])
+        plt.plot(df_n["low_trend"])
+        plt.plot(df_n["high_trend"])
+        plt.title(str(minute)+'Min')
+        plt.show()
+        
+        low_value = int(df_n["low_trend"].iloc[-1])
+        high_value = int(df_n["high_trend"].iloc[-1])
+
+        return {"low": low_value, "high": high_value}
+    
+    # def check_fo(self,minute):
+    #     '''
+    #     檢查是否發生假突破
+    #     '''
+    #     df = None
+    #     if minute == 1:
+    #         df = self.df_1Min.tail(self.how)
+    #     elif minute == 5:
+    #         df = self.df_5Min.tail(self.how)
+    #     elif minute == 15:
+    #         df = self.df_15Min.tail(self.how)
+    #     elif minute == 30:
+    #         df = self.df_30Min.tail(self.how)
+    #     elif minute == 60:
+    #         df = self.df_60Min.tail(self.how)
             
-        # 計算均線及rsi
-        df['ma'] = ta.trend.sma_indicator(df['close'], window=20)
-        df['rsi'] = ta.momentum.rsi(df['close'], window=14)
+    #     # 計算均線及rsi
+    #     df['ma'] = ta.trend.sma_indicator(df['close'], window=20)
+    #     df['rsi'] = ta.momentum.rsi(df['close'], window=14)
+    #     # 判断是否为假突破
+    #     if df['close'][0] > df['ma'][0] and df['close'][1] < df['ma'][1] and df['rsi'][1] > 70 and df['volume'][1] < df['volume'].rolling(20).mean()[1]:
+    #         print('假突破')
+    #         return True
+    #     else:
+    #         print('非假突破')
+    #         return False
+            
+    # def check_bto(self,minute):
+    #     '''
+    #     檢查是否發生破底翻
+    #     '''
+    #     df = None
+    #     if minute == 1:
+    #         df = self.df_1Min.tail(self.how)
+    #     elif minute == 5:
+    #         df = self.df_5Min.tail(self.how)
+    #     elif minute == 15:
+    #         df = self.df_15Min.tail(self.how)
+    #     elif minute == 30:
+    #         df = self.df_30Min.tail(self.how)
+    #     elif minute == 60:
+    #         df = self.df_60Min.tail(self.how)
+            
+    #     # 計算均線及rsi
+    #     df['ma'] = ta.trend.sma_indicator(df['close'], window=20)
+    #     df['rsi'] = ta.momentum.rsi(df['close'], window=14)
         
-        #取前一筆收盤、均線、rsi
-        last_close = df.iloc[-1]['close']
-        last_ma = df.iloc[-1]['ma']
-        last_rsi = df.iloc[-1]['rsi']
-        if last_close > last_ma and last_rsi > 50:
-            print('破底翻')
-            return True
-        else:
-            print('沒破底翻')
-            return False
+    #     #取前一筆收盤、均線、rsi
+    #     last_close = df.iloc[-1]['close']
+    #     last_ma = df.iloc[-1]['ma']
+    #     last_rsi = df.iloc[-1]['rsi']
+    #     if last_close > last_ma and last_rsi > 50:
+    #         print('破底翻')
+    #         return True
+    #     else:
+    #         print('沒破底翻')
+    #         return False
         
-    def check_volume(self):
-        '''
-        檢查是否爆量，取前5根1分k加總量
-        '''
-        #avg_volume = self.df_1Min['volume'].tail(5).rolling(window=5).mean()
-        sum_volume = self.df_1Min['volume'].tail(5).sum()
-        is_burst = np.where(self.volume > sum_volume, True, False)
-        return is_burst
+    # def check_volume(self):
+    #     '''
+    #     檢查是否爆量，取前5根1分k加總量
+    #     '''
+    #     #avg_volume = self.df_1Min['volume'].tail(5).rolling(window=5).mean()
+    #     sum_volume = self.df_1Min['volume'].tail(5).sum()
+    #     is_burst = np.where(self.volume > sum_volume, True, False)
+    #     return is_burst
     
     def get_ps(self,minute):
         '''
@@ -242,7 +291,7 @@ class order():
         high = df['close'].max()
         low = df['close'].min()
         data = {'high':high,'low':low}
-        
+        print('現價:',self.close)
         print("壓力:", high)
         print("支撐:", low)
         return data
@@ -314,6 +363,7 @@ class order():
             'l7':math.ceil(df_1day['low']-ed*0.75),#過低倍數0.75
             'l8':df_1day['low']-ed*1 #過低倍數1  
         }
+        
         return data
         
     def check_2b(self,trend,minute):
@@ -387,49 +437,6 @@ class order():
                 return True
 
         return False
-    
-    def check_trend(self,minute):
-        '''
-        判斷60K的趨勢，取n筆來判斷
-        '''
-        df = None
-        if minute == 5:
-            df = self.df_5Min.tail(self.how)
-        elif minute == 15:
-            df = self.df_15Min.tail(self.how)
-        elif minute == 30:
-            df = self.df_30Min.tail(self.how)
-        elif minute == 60:
-            df = self.df_60Min.tail(self.how)
-        # 計算每波的最低點
-        
-        min_points = []
-        min_price = float('inf')
-        for i in range(len(df)):
-            if df.iloc[i]['low'] < min_price:
-                min_price = df.iloc[i]['low']
-            if i > 0 and i < len(df)-1 and df.iloc[i-1]['low'] > df.iloc[i]['low'] < df.iloc[i+1]['low']:
-                min_points.append((df.iloc[i], min_price))
-        
-        # 計算上升趨勢線
-        x = [i for i in range(len(min_points))]
-        y = [p[1] for p in min_points]
-        z = np.polyfit(x, y, 1)
-        p = np.poly1d(z)
-        # 計算最新一根 K 棒的位置
-        last_price = df.iloc[-1]['close']
-        last_index = len(df) - 1
-
-        # 計算上升趨勢線的值
-        trend_value = p(last_index)
-        
-        # 判斷趨勢
-        if last_price > trend_value:#目前為上升趨勢
-            return 1
-        elif last_price < trend_value:#目前為下降趨勢
-            return -1
-        else:#盤整
-            return 0
             
     def trade(self,type,lot):
         '''

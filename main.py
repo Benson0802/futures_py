@@ -54,13 +54,13 @@ try:
                 if tick.close in amount: return
                 amount.append(tick.close)
                 ord = order(tick.close,has_order,volume)
-                #has_order = ord.strategy1()
+                has_order = ord.strategy1()
                 print('是否有單:'+str(has_order))
                 #has_order = ord.strategy2()
-                has_order = ord.strategy3()
+                #ord.strategy2()
+                #has_order = ord.strategy3()
                 now_time = time.strftime("%H:%M", time.localtime())
                 if now_time == "05:00" or now_time == "13:45":
-                    print('5點')
                     print(volume)
                     print(amount)
                     if len(amount) > 0:
@@ -89,10 +89,11 @@ try:
     else:
         kbars = api.kbars(
             contract=api.Contracts.Futures.MXF.MXFR1,
-            start='2023-04-03',
-            end='2023-04-08',
+            start='2023-04-10',
+            end='2023-04-15',
         )
         ck = convertK(kbars)
+        print(ck)
         ck.write_history_1k_bar()
         ck.convert_k_bar('5Min')
         ck.convert_k_bar('15Min')
@@ -105,7 +106,6 @@ try:
         api.logout()
         
 except Exception as err:
-    print('5點')
     print(err)
     print(volume)
     print(amount)
