@@ -31,7 +31,7 @@ class order():
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
         self.total_lot = 0 #目前部位
         self.how = 100 #取幾根k做判斷
-        
+        self.is_break = False
     def strategy1(self):
         '''
         策略1:依傳入的頻率k棒帶入黃金分割率計算目標價
@@ -111,9 +111,17 @@ class order():
                 if self.close in range(data['forecast_high'], data['forecast_high']+11):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
+                elif self.close > data['forecast_high'] +12: #突破上線段買多
+                    self.trade(1, 1) #買進多單
+                    self.has_order = True
+                    self.is_break = True
                 elif self.close in range(data['forecast_low']-10, data['forecast_low']+1):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
+                elif self.close < data['forecast_low']-11: #突破下線段放空
+                    self.trade(1, -1) #買進空單
+                    self.has_order = True
+                    self.is_break = True
                 else:
                     print('條件不符合繼續等')
             elif data['trend'] == 1:#只有在低點買多
@@ -121,11 +129,19 @@ class order():
                 if self.close in range(data['forecast_low']+1, data['forecast_low']-10):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True 
+                elif self.close < data['forecast_low']-11: #突破下線段放空
+                    self.trade(1, -1) #買進空單
+                    self.has_order = True
+                    self.is_break = True
             elif data['trend'] == 2:#只有在高點放空
                 print('下降趨勢')
                 if self.close in range(data['forecast_high'], data['forecast_high']+11):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
+                elif self.close > data['forecast_high'] +12: #突破上線段買多
+                    self.trade(1, 1) #買進多單
+                    self.has_order = True
+                    self.is_break = True
         else:#目前有單
             self.has_order = self.check_trend_loss(data)
     
@@ -203,7 +219,7 @@ class order():
         plt.plot(df_n["low_trend"])
         plt.plot(df_n["high_trend"])
         plt.title(str(minute)+'Min')
-        #plt.show()
+        plt.show()
         
         trend = -1
         first_low = int(df_n["low_trend"].iloc[0])
@@ -271,11 +287,20 @@ class order():
                             return False
                         #判斷趨勢停利
                         if data['trend'] == 0 or data['trend'] == 1: #盤整或上升趨勢則上線段停利
-                            if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段停利(容許值上下五點)
-                                self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
-                                print('多單停利')
-                                self.trade(-1,-1) #多單停利
-                                return False
+                            if self.is_break == False: #是否為突破後的多單
+                                if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段停利(容許值上下五點)
+                                    self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                                    print('多單停利')
+                                    self.trade(-1,-1) #多單停利
+                                    return False
+                            else:#突破後的多單抓50點停利
+                                if self.close >= df_trade['price']+50:
+                                    self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                                    print('多單停利')
+                                    self.trade(-1,-1) #多單停利
+                                    self.is_break = False
+                                    return False
+                                
                     elif df_trade['lot'] == -1: #空單的處理
                         if (self.close > (df_trade['price'] + self.loss)): 
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
@@ -284,11 +309,19 @@ class order():
                             return False
                         #判斷趨勢停利
                         if data['trend'] == 0 or data['trend'] == 2: #盤整或下降趨勢則下線段停利
-                            if self.close in range(data['forecast_low']-5, data['forecast_low']+5):#下線段停利(容許值上下五點)
-                                self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
-                                print('空單停利')
-                                self.trade(-1, 1) #空單停利
-                                return False
+                            if self.is_break == False: #是否為突破後的空單
+                                if self.close in range(data['forecast_low']-5, data['forecast_low']+5):#下線段停利(容許值上下五點)
+                                    self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                                    print('空單停利')
+                                    self.trade(-1, 1) #空單停利
+                                    return False
+                            else:#突破後的空單抓50點停利
+                                if self.close <= df_trade['price']+50:
+                                    self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                                    print('空單停利')
+                                    self.trade(-1, 1) #空單停利
+                                    self.is_break = False
+                                    return False
     def check_loss(self):
         '''
         判斷停損及停利，依傳入的分k計算高低點停利
