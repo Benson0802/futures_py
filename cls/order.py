@@ -12,7 +12,7 @@ class order():
     '''
     建立在一口單的進出
     '''
-    def __init__(self,close,has_order,volume):
+    def __init__(self,close):
         self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
         self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
         self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
@@ -20,9 +20,12 @@ class order():
         self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
         self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
         self.df_trade = pd.read_csv('data/trade.csv', index_col='datetime')
-        self.has_order = has_order
+        self.df_trade = pd.read_csv('data/trade.csv', index_col='datetime')
+        self.has_order = False
+        if not self.df_trade.empty:
+            if self.df_trade.iloc[-1]['type'] == 1:
+                self.has_order = True
         self.close = int(close)
-        self.volume = int(volume)
         self.loss = 10 #損失幾點出場
         self.balance = 0 #賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
@@ -36,8 +39,7 @@ class order():
         print('進入策略1:黃金分割率')
         fc_data = self.fibonacci()
         print(fc_data)
-        print('現價:'+self.close)
-        # is_burst = self.check_volume()
+        print('現價:'+str(self.close))
         #判斷有單或沒單
         if self.has_order == True: #有單的話判斷出場
             self.has_order = self.check_loss()
@@ -53,7 +55,6 @@ class order():
                 self.has_order = True
             #空方最後防守區(誤差容許值五點)
             elif self.close in range(fc_data['h5']-5, fc_data['h5']):
-                print('if=3')
                 print('現價:'+str(self.close))
                 print('高價-5:'+str(fc_data['h5']-5))
                 print('高價:'+str(fc_data['h5']))
@@ -62,7 +63,6 @@ class order():
                 self.has_order = True
             #多方滿足點(誤差容許值五點)
             elif self.close in range(fc_data['h8']-5, fc_data['h8']):
-                print('if=4')
                 print('現價:'+str(self.close))
                 print('高價-5:'+str(fc_data['h8']-5))
                 print('高價:'+str(fc_data['h8']))
@@ -71,7 +71,6 @@ class order():
                 self.has_order = True
             #前一日最低點(誤差容許值五點)
             elif self.close in range(fc_data['l4'], fc_data['l4']+5):
-                print('if=5')
                 print('現價:'+str(self.close))
                 print('低價:'+str(fc_data['l4']))
                 print('低價+5:'+str(fc_data['l4']+5))
@@ -80,7 +79,6 @@ class order():
                 self.has_order = True
             #空方最後防守區(誤差容許值五點)
             elif self.close in range(fc_data['l5'], fc_data['l5']+5):
-                print('if=6')
                 print('現價:'+str(self.close))
                 print('低價:'+str(fc_data['l5']))
                 print('低價+5:'+str(fc_data['l5']+5))
@@ -89,7 +87,6 @@ class order():
                 self.has_order = True
             #空方滿足區(誤差容許值五點)
             elif self.close in range(fc_data['l8'], fc_data['l8']+5):
-                print('if=7')
                 print('現價:'+str(self.close))
                 print('低價:'+str(fc_data['l8']))
                 print('低價+5:'+str(fc_data['l8']+5))
@@ -121,7 +118,6 @@ class order():
         #     else:
         #         print('條件不成立繼續龜!')
         # else:#有單判斷是否停損
-        #     #is_burst = self.check_volume()
         #     self.has_order = self.check_loss()
         
         # return self.has_order
@@ -156,7 +152,6 @@ class order():
                 print('條件不成立繼續龜!')
                 
         else:#有單判斷是否停損
-            #is_burst = self.check_volume()
             self.has_order = self.check_loss()
         return self.has_order
     
@@ -264,14 +259,6 @@ class order():
     #         print('沒破底翻')
     #         return False
         
-    # def check_volume(self):
-    #     '''
-    #     檢查是否爆量，取前5根1分k加總量
-    #     '''
-    #     #avg_volume = self.df_1Min['volume'].tail(5).rolling(window=5).mean()
-    #     sum_volume = self.df_1Min['volume'].tail(5).sum()
-    #     is_burst = np.where(self.volume > sum_volume, True, False)
-    #     return is_burst
     
     def get_ps(self,minute):
         '''
@@ -342,7 +329,7 @@ class order():
         '''
         用前一日開盤價帶入費波南希列數取得各級價差
         '''
-        df_1day = self.df_1day.iloc[-2]
+        df_1day = self.df_1day.iloc[-1]
         ed = df_1day['high'] - df_1day['low'] #計算高低差
         data = {
             'h8':df_1day['high'] + ed * 1,#過高倍數1
