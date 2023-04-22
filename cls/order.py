@@ -6,6 +6,8 @@ import cls.notify as lineMeg
 import numpy as np
 import time
 from scipy.stats import linregress
+import matplotlib
+matplotlib.use('TkAgg')  # 使用TkAgg或Qt5Agg作为非阻塞后端
 import matplotlib.pyplot as plt
 
 class order():
@@ -32,6 +34,7 @@ class order():
         self.total_lot = 0 #目前部位
         self.how = 100 #取幾根k做判斷
         self.is_break = False
+        
     def strategy1(self):
         '''
         策略1:依傳入的頻率k棒帶入黃金分割率計算目標價
@@ -215,12 +218,19 @@ class order():
         df_n["low_trend"] = reg_low[1] + reg_low[0] * df_n.index
         df_n["high_trend"] = reg_high[1] + reg_high[0] * df_n.index
         
-        plt.plot(df_n["close"])
-        plt.plot(df_n["low_trend"])
-        plt.plot(df_n["high_trend"])
-        plt.title(str(minute)+'Min')
+        # 繪製圖表
+        fig, ax = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [2, 1]})
+        ax[0].plot(df_n["close"])
+        ax[0].plot(df_n["low_trend"])
+        ax[0].plot(df_n["high_trend"])
+        ax[0].set_title(str(minute)+'Min')
+
+        # 繪製成交量
+        ax[1].bar(df_n.index, df_n.volume, width=0.4)
+        ax[1].set_title("Volume")
+
         plt.show()
-        
+
         trend = -1
         first_low = int(df_n["low_trend"].iloc[0])
         first_high = int(df_n["high_trend"].iloc[0])
@@ -230,7 +240,7 @@ class order():
         last_two_high = int(df_n["high_trend"].iloc[-2])
         forecast_low = 0 #預測下個趨勢線延伸的落點
         forecast_high = 0 #預測下個趨勢線延伸的落點
-        #df_1Min_close = self.df_1Min.iloc[-1]['close']
+        
         #判斷趨勢
         if last_low > first_low and last_high > first_high:#(上升趨勢，上下兩條線的最後一筆同時大於第一筆)
             trend = 1
@@ -243,8 +253,8 @@ class order():
         elif last_high <= first_high and last_low >= first_low:#盤整，上線段的最後一筆小於等於第一筆，下線段的最後一筆大於等於第一筆 呈現三角收斂或上下區間
             trend = 0
             forecast_low = last_low
-            forecast_high = last_high
-            
+            forecast_high = last_high      
+        
         return {"last_low": last_low, "last_high": last_high, 'forecast_low':forecast_low,'forecast_high':forecast_high ,'trend': trend}
     
     def get_ps(self,minute):
