@@ -96,31 +96,38 @@ class order():
                   
         return self.has_order
     
-    def strategy2(self):
+    def strategy2(self,min):
         '''
-        道式理論123及2b法則，停損則是跌破上升趨勢或下降趨勢
+        上升通道及下降通道策略
         '''
-        self.check_trend(1)
-        exit()
-        # trend = self.check_trend(60)
-        # is_2b = self.check_2b(trend,60)
-        # print('目前趨勢:'+str(trend))
-        # print('是否2b:'+str(is_2b))
-        # if self.has_order is False: #沒單才進場
-        #     if trend == 1: #上升趨勢買進
-        #         if is_2b: #符合2b
-        #             self.trade(1, 1) #買進多單
-        #             self.has_order = True
-        #     elif trend == -1: #下降趨勢放空
-        #         if is_2b: #符合2b
-        #             self.trade(1, -1) #買進空單
-        #             self.has_order = True
-        #     else:
-        #         print('條件不成立繼續龜!')
-        # else:#有單判斷是否停損
-        #     self.has_order = self.check_loss()
-        
-        # return self.has_order
+        data = self.check_trend(min)
+        print('上線段最後價格:'+str(data['last_high']))
+        print('下線段最後價格:'+str(data['last_low']))
+        print('上線段預測價格:'+str(data['forecast_high']))
+        print('下線段預測價格:'+str(data['forecast_low']))
+        if self.has_order == False: #目前沒單
+            if data['trend'] == 0: #上空下多做價差
+                print('盤整趨勢')
+                if self.close in range(data['forecast_high'], data['forecast_high']+11):#上線段放空
+                    self.trade(1, -1) #買進空單
+                    self.has_order = True
+                elif self.close in range(data['forecast_low']-10, data['forecast_low']+1):#下線段買多
+                    self.trade(1, 1) #買進多單
+                    self.has_order = True
+                else:
+                    print('條件不符合繼續等')
+            elif data['trend'] == 1:#只有在低點買多
+                print('上升趨勢')
+                if self.close in range(data['forecast_low']+1, data['forecast_low']-10):#下線段買多
+                    self.trade(1, 1) #買進多單
+                    self.has_order = True 
+            elif data['trend'] == 2:#只有在高點放空
+                print('下降趨勢')
+                if self.close in range(data['forecast_high'], data['forecast_high']+11):#上線段放空
+                    self.trade(1, -1) #買進空單
+                    self.has_order = True
+        else:#目前有單
+            self.has_order = self.check_trend_loss(data)
     
     def strategy3(self):
         '''
@@ -170,6 +177,8 @@ class order():
             df = self.df_30Min.tail(self.how).reset_index(drop=False)
         elif minute == 60:
            df = self.df_60Min.tail(self.how).reset_index(drop=False)
+        elif minute == 1440:
+            df = self.df_1day.tail(self.how).reset_index(drop=False)
            
         df_n = df.reset_index()
         reg_up = linregress(x = df_n.index,y = df_n.close)
@@ -194,71 +203,33 @@ class order():
         plt.plot(df_n["low_trend"])
         plt.plot(df_n["high_trend"])
         plt.title(str(minute)+'Min')
-        plt.show()
+        #plt.show()
         
-        low_value = int(df_n["low_trend"].iloc[-1])
-        high_value = int(df_n["high_trend"].iloc[-1])
-
-        return {"low": low_value, "high": high_value}
-    
-    # def check_fo(self,minute):
-    #     '''
-    #     檢查是否發生假突破
-    #     '''
-    #     df = None
-    #     if minute == 1:
-    #         df = self.df_1Min.tail(self.how)
-    #     elif minute == 5:
-    #         df = self.df_5Min.tail(self.how)
-    #     elif minute == 15:
-    #         df = self.df_15Min.tail(self.how)
-    #     elif minute == 30:
-    #         df = self.df_30Min.tail(self.how)
-    #     elif minute == 60:
-    #         df = self.df_60Min.tail(self.how)
+        trend = -1
+        first_low = int(df_n["low_trend"].iloc[0])
+        first_high = int(df_n["high_trend"].iloc[0])
+        last_low = int(df_n["low_trend"].iloc[-1])
+        last_high = int(df_n["high_trend"].iloc[-1])
+        last_two_low = int(df_n["low_trend"].iloc[-2])
+        last_two_high = int(df_n["high_trend"].iloc[-2])
+        forecast_low = 0 #預測下個趨勢線延伸的落點
+        forecast_high = 0 #預測下個趨勢線延伸的落點
+        #df_1Min_close = self.df_1Min.iloc[-1]['close']
+        #判斷趨勢
+        if last_low > first_low and last_high > first_high:#(上升趨勢，上下兩條線的最後一筆同時大於第一筆)
+            trend = 1
+            forecast_low = last_low + (last_low - last_two_low)
+            forecast_high = last_high + (last_high - last_two_high)
+        elif last_low < first_low and last_high < first_high:#(下升趨勢，上下兩條線的最後一筆同時小於第一筆)
+            trend = 2
+            forecast_low = last_low - (last_two_low - last_low)
+            forecast_high = last_high - (last_two_high - last_high)
+        elif last_high <= first_high and last_low >= first_low:#盤整，上線段的最後一筆小於等於第一筆，下線段的最後一筆大於等於第一筆 呈現三角收斂或上下區間
+            trend = 0
+            forecast_low = last_low
+            forecast_high = last_high
             
-    #     # 計算均線及rsi
-    #     df['ma'] = ta.trend.sma_indicator(df['close'], window=20)
-    #     df['rsi'] = ta.momentum.rsi(df['close'], window=14)
-    #     # 判断是否为假突破
-    #     if df['close'][0] > df['ma'][0] and df['close'][1] < df['ma'][1] and df['rsi'][1] > 70 and df['volume'][1] < df['volume'].rolling(20).mean()[1]:
-    #         print('假突破')
-    #         return True
-    #     else:
-    #         print('非假突破')
-    #         return False
-            
-    # def check_bto(self,minute):
-    #     '''
-    #     檢查是否發生破底翻
-    #     '''
-    #     df = None
-    #     if minute == 1:
-    #         df = self.df_1Min.tail(self.how)
-    #     elif minute == 5:
-    #         df = self.df_5Min.tail(self.how)
-    #     elif minute == 15:
-    #         df = self.df_15Min.tail(self.how)
-    #     elif minute == 30:
-    #         df = self.df_30Min.tail(self.how)
-    #     elif minute == 60:
-    #         df = self.df_60Min.tail(self.how)
-            
-    #     # 計算均線及rsi
-    #     df['ma'] = ta.trend.sma_indicator(df['close'], window=20)
-    #     df['rsi'] = ta.momentum.rsi(df['close'], window=14)
-        
-    #     #取前一筆收盤、均線、rsi
-    #     last_close = df.iloc[-1]['close']
-    #     last_ma = df.iloc[-1]['ma']
-    #     last_rsi = df.iloc[-1]['rsi']
-    #     if last_close > last_ma and last_rsi > 50:
-    #         print('破底翻')
-    #         return True
-    #     else:
-    #         print('沒破底翻')
-    #         return False
-        
+        return {"last_low": last_low, "last_high": last_high, 'forecast_low':forecast_low,'forecast_high':forecast_high ,'trend': trend}
     
     def get_ps(self,minute):
         '''
@@ -283,6 +254,41 @@ class order():
         print("支撐:", low)
         return data
     
+    def check_trend_loss(self,data):
+        '''
+        依趨勢線出場或停損
+        '''
+        if self.df_trade.empty is False:
+            df_trade = self.df_trade.iloc[-1]
+            if len(df_trade) > 0:
+                if df_trade['type'] == 1: #有單時
+                    self.total_lot = 0
+                    if df_trade['lot'] == 1: #有多單的處理
+                        if (self.close < (df_trade['price'] - self.loss)):#收盤價 < 買進價格-10點
+                            self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                            print('多單停損')
+                            self.trade(-1,-1) #多單停損
+                            return False
+                        #判斷趨勢停利
+                        if data['trend'] == 0 or data['trend'] == 1: #盤整或上升趨勢則上線段停利
+                            if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段停利(容許值上下五點)
+                                self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                                print('多單停利')
+                                self.trade(-1,-1) #多單停利
+                                return False
+                    elif df_trade['lot'] == -1: #空單的處理
+                        if (self.close > (df_trade['price'] + self.loss)): 
+                            self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                            print('空單停損')
+                            self.trade(-1, 1) #空單回補
+                            return False
+                        #判斷趨勢停利
+                        if data['trend'] == 0 or data['trend'] == 2: #盤整或下降趨勢則下線段停利
+                            if self.close in range(data['forecast_low']-5, data['forecast_low']+5):#下線段停利(容許值上下五點)
+                                self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                                print('空單停利')
+                                self.trade(-1, 1) #空單停利
+                                return False
     def check_loss(self):
         '''
         判斷停損及停利，依傳入的分k計算高低點停利
@@ -352,78 +358,6 @@ class order():
         }
         
         return data
-        
-    def check_2b(self,trend,minute):
-        '''
-        2b法則判斷
-        '''
-        df = None
-        if minute == 5:
-            df = self.df_5Min.tail(self.how)
-        elif minute == 15:
-            df = self.df_15Min.tail(self.how)
-        elif minute == 30:
-            df = self.df_30Min.tail(self.how)
-        elif minute == 60:
-            df = self.df_60Min.tail(self.how)
-            
-        if trend == 0:
-            return False
-
-        if trend == 1:
-            # 上升趨勢，用前一波的最低點作為判斷標準
-            low_points = []
-            low_flag = False
-            last_low = 0
-            for i in range(1, len(df)):
-                if df['low'][i] < df['low'][i-1]:
-                    low_flag = True
-                    low_points.append(df['low'][i])
-                elif df['low'][i] > df['low'][i-1] and low_flag:
-                    # 當出現高點時，將 low_flag 設為 False
-                    low_flag = False
-                    # 取前一波的最低點
-                    last_low = min(low_points)
-                    # 重新初始化 low_points
-                    low_points = []
-                elif df['low'][i] == df['low'][i-1] and low_flag:
-                    low_points.append(df['low'][i])
-            print('上升趨勢做多')
-            print('現價:'+str(self.close))
-            print('前低+5:'+str(last_low+5))
-            print('前高-5:'+str(last_low-5))
-            # 判斷是否符合 2B 條件
-            if self.close >= int(last_low+5) and self.close <= int(last_low-5):
-                return True
-
-        elif trend == -1:
-            # 下降趨勢，用前一波的高點作為判斷標準
-            high_points = []
-            high_flag = False
-            last_high = 0
-            for i in range(1, len(df)):
-                if df['high'][i] > df['high'][i-1]:
-                    high_flag = True
-                    high_points.append(df['high'][i])
-                elif df['high'][i] < df['high'][i-1] and high_flag:
-                    # 當出現低點時，將 high_flag 設為 False
-                    high_flag = False
-                    # 取前一波的高點
-                    last_high = max(high_points)
-                    # 重新初始化 high_points
-                    high_points = []
-                elif df['high'][i] == df['high'][i-1] and high_flag:
-                    high_points.append(df['high'][i])
-
-            # 判斷是否符合 2B 條件
-            print('下降趨勢放空')
-            print('現價:'+str(self.close))
-            print('前高+5:'+str(last_high+5))
-            print('前高-5:'+str(last_high-5))
-            if int(self.close) >= int(last_high-5) and int(self.close) <= int(last_high+5):
-                return True
-
-        return False
             
     def trade(self,type,lot):
         '''
