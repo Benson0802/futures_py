@@ -11,6 +11,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import globals
 import threading
+from matplotlib.animation import FuncAnimation
 
 class order():
     '''
@@ -23,7 +24,6 @@ class order():
         self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
         self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
         self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
-        self.df_trade = pd.read_csv('data/trade.csv', index_col='datetime')
         self.df_trade = pd.read_csv('data/trade.csv', index_col='datetime')
         self.has_order = False
         if not self.df_trade.empty:
@@ -152,10 +152,10 @@ class order():
             self.has_order = self.check_trend_loss(data)
             
         if globals.has_thread == False:
-            thread = threading.Thread(target=self.draw_trend,args=(minute, trend_line))
+            thread = threading.Thread(target=self.draw_trend, args=(minute, trend_line))
             thread.start()
             globals.has_thread = True
-
+    
     def strategy3(self):
         '''
         使用60k的支撐壓力判斷是否破底翻再進場
@@ -195,16 +195,22 @@ class order():
         '''
         df = None
         if minute == 1:
+            self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
             df = self.df_1Min.tail(self.how).reset_index(drop=False)
         elif minute == 5:
+            self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
             df = self.df_5Min.tail(self.how).reset_index(drop=False)
         elif minute == 15:
+            self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
             df = self.df_15Min.tail(self.how).reset_index(drop=False)
         elif minute == 30:
+            self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
             df = self.df_30Min.tail(self.how).reset_index(drop=False)
         elif minute == 60:
-           df = self.df_60Min.tail(self.how).reset_index(drop=False)
+            self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
+            df = self.df_60Min.tail(self.how).reset_index(drop=False)
         elif minute == 1440:
+            self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
             df = self.df_1day.tail(self.how).reset_index(drop=False)
            
         df_n = df.reset_index()
@@ -225,6 +231,7 @@ class order():
 
         df_n["low_trend"] = reg_low[1] + reg_low[0] * df_n.index
         df_n["high_trend"] = reg_high[1] + reg_high[0] * df_n.index
+        
         return df_n
     
     def get_trend_line(self,df_n):
@@ -259,19 +266,30 @@ class order():
     
     def draw_trend(self,minute,df_n):
         '''
-        繪制趨勢線
+        繪製趨勢線
         '''
-        # 繪製圖表
         fig, ax = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [2, 1]})
+
+        def update(_):
+            df_n = self.get_trend_data(minute)
+            print(df_n)
+            ax[0].clear()
+            ax[1].clear()
+            ax[0].plot(df_n["close"])
+            ax[0].plot(df_n["low_trend"])
+            ax[0].plot(df_n["high_trend"])
+            ax[0].set_title(str(minute)+'Min')
+            ax[1].bar(df_n.index, df_n.volume, width=0.4)
+            ax[1].set_title("Volume")
+            
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
         ax[0].set_title(str(minute)+'Min')
-
-        # 繪製成交量
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
 
+        ani = FuncAnimation(fig, update, interval=5000)
         plt.show()
       
     def get_ps(self,minute):
