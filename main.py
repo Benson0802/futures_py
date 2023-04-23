@@ -52,7 +52,7 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
             ck.write_1k_bar(current_time,globals.volume,globals.amount)
             globals.now_min = ''
             globals.amount.clear()
-            volume = 0
+            globals.volume = 0
         else:
             ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
             globals.now_min = ''
