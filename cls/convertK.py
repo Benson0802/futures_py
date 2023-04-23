@@ -5,6 +5,7 @@ from datetime import datetime,timedelta
 import time
 import numpy as np
 from dateutil.relativedelta import relativedelta
+import globals
 
 class convertK():
     '''
@@ -23,11 +24,11 @@ class convertK():
         self.min_path = 'data/1Min.csv'
         self.tick = tick
         
-    def get_now_min(self,now):
-        if now == '':
+    def get_now_min(self):
+        if globals.now_min == None:
             return self.datetime.strftime('%Y/%m/%d %H:%M')
         else:
-            return now
+            return globals.now_min
         
     def get_tick_min(self):
         return self.datetime.strftime('%Y/%m/%d %H:%M')
