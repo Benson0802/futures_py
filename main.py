@@ -11,7 +11,7 @@ import globals
 globals.initialize()
 obj = check_opening()
 year_mon = obj.get_year_mon()
-code = 'MXF' + str(year_mon['year']) + ('0' if len(str(year_mon['mon'])) == 1 else '') + str(year_mon['mon'])
+globals.code = 'MXF' + str(year_mon['year']) + ('0' if len(str(year_mon['mon'])) == 1 else '') + str(year_mon['mon'])
 current_time = datetime.datetime.now().time().replace(microsecond=0)
 
 with open('API_KEY.json', 'r') as f:
@@ -24,7 +24,7 @@ with open('API_KEY.json', 'r') as f:
     )
 #開盤時間抓tick
 api.quote.subscribe(
-    api.Contracts.Futures.MXF[code],
+    api.Contracts.Futures.MXF[globals.code],
     quote_type = sj.constant.QuoteType.Tick,
     version = sj.constant.QuoteVersion.v1,
 )

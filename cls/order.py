@@ -277,14 +277,14 @@ class order():
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
-            ax[0].set_title(str(minute)+'Min')
+            ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
             
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
-        ax[0].set_title(str(minute)+'Min')
+        ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
 
