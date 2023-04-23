@@ -268,7 +268,7 @@ class order():
         '''
         繪製趨勢線
         '''
-        fig, ax = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [2, 1]})
+        fig, ax = plt.subplots(3, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [4, 1, 1]})
 
         def update(_):
             df_n = self.get_trend_data(minute)
@@ -280,6 +280,16 @@ class order():
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
+            df_n["ema12"] = df_n["close"].ewm(span=12).mean()
+            df_n["ema26"] = df_n["close"].ewm(span=26).mean()
+            df_n["dif"] = df_n["ema12"] - df_n["ema26"]
+            df_n["dea"] = df_n["dif"].ewm(span=9).mean()
+            df_n["macd"] = (df_n["dif"] - df_n["dea"]) * 2
+            ax2 = ax[2].twinx()
+            ax2.plot(df_n.index, df_n["dif"], label="DIF")
+            ax2.plot(df_n.index, df_n["dea"], label="DEA")
+            ax2.bar(df_n.index, df_n["macd"], width=0.2, label="MACD", alpha=0.7)
+            ax2.legend()
             
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
@@ -287,7 +297,17 @@ class order():
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
-
+        df_n["ema12"] = df_n["close"].ewm(span=12).mean()
+        df_n["ema26"] = df_n["close"].ewm(span=26).mean()
+        df_n["dif"] = df_n["ema12"] - df_n["ema26"]
+        df_n["dea"] = df_n["dif"].ewm(span=9).mean()
+        df_n["macd"] = (df_n["dif"] - df_n["dea"]) * 2
+        ax2 = ax[2].twinx()
+        ax2.plot(df_n.index, df_n["dif"], label="DIF")
+        ax2.plot(df_n.index, df_n["dea"], label="DEA")
+        ax2.bar(df_n.index, df_n["macd"], width=0.2, label="MACD", alpha=0.7)
+        ax2.legend()
+        
         ani = FuncAnimation(fig, update, interval=5000)
         plt.show()
       
