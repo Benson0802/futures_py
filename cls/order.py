@@ -272,7 +272,6 @@ class order():
 
         def update(_):
             df_n = self.get_trend_data(minute)
-            print(df_n)
             ax[0].clear()
             ax[1].clear()
             ax[0].plot(df_n["close"])
