@@ -106,7 +106,6 @@ class order():
         '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        
         print('上線段最後價格:'+str(data['last_high']))
         print('下線段最後價格:'+str(data['last_low']))
         print('上線段預測價格:'+str(data['forecast_high']))
@@ -150,7 +149,8 @@ class order():
                     globals.is_break = True
         else:#目前有單
             self.has_order = self.check_trend_loss(data)
-            
+
+        
         if globals.has_thread == False:
             thread = threading.Thread(target=self.draw_trend, args=(minute, trend_line))
             thread.start()
@@ -218,20 +218,19 @@ class order():
         up_line = reg_up[1] + reg_up[0] * df_n.index
         df_temp_low = df_n[df_n["close"] < up_line]
         df_temp_high = df_n[df_n["close"] > up_line]
-
+        
         while len(df_temp_low) >= 5 :
             reg_low = linregress(x = df_temp_low.index,y = df_temp_low.close)
-            up_line_low = reg_low[1] + reg_low[0] * df_n.index
+            up_line_low = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
             df_temp_low = df_n[df_n["close"] < up_line_low]
 
         while len(df_temp_high) >= 5 :
             reg_high = linregress(x = df_temp_high.index,y = df_temp_high.close)
-            up_line_high = reg_high[1] + reg_high[0] * df_n.index
+            up_line_high = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
             df_temp_high = df_n[df_n["close"] > up_line_high]
 
-        df_n["low_trend"] = reg_low[1] + reg_low[0] * df_n.index
-        df_n["high_trend"] = reg_high[1] + reg_high[0] * df_n.index
-        
+        df_n["low_trend"] = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
+        df_n["high_trend"] = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
         return df_n
     
     def get_trend_line(self,df_n):
@@ -269,7 +268,6 @@ class order():
         繪製趨勢線
         '''
         fig, ax = plt.subplots(3, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [4, 1, 1]})
-
         def update(_):
             df_n = self.get_trend_data(minute)
             ax[0].clear()
@@ -471,6 +469,7 @@ class order():
         elif type == -1 and lot == -1:
             print('多單賣出')
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         self.total_balance = self.total_balance + self.balance
         with open('data/trade.csv', 'a', encoding='utf-8', newline='') as file:
             writer = csv.writer(file)

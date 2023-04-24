@@ -38,32 +38,28 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
     ck = convertK(tick,True)
     #寫入csv 比對用
     ck.write_tick("tick")
+    #策略判斷
+    ord = order(tick.close)
+    #ord.strategy1()
+    ord.strategy2(15)
+    #ord.strategy3()
     globals.now_min = ck.get_now_min()
     globals.tick_min = ck.get_tick_min()
-    if globals.now_min == globals.tick_min: #現在的分鐘數與tick分鐘相符合
+    
+    if globals.now_min == globals.tick_min: #現在的分鐘數與tick分鐘相符合就收集資料
         globals.volume += tick.volume
-        if tick.close in globals.amount: return #排除重覆資料
-        globals.amount.append(tick.close)
-        ord = order(tick.close)
-        #ord.strategy1()
-        ord.strategy2()
-        #ord.strategy3()
-        if len(globals.amount) > 0:
-            ck.write_1k_bar(current_time,globals.volume,globals.amount)
-            globals.now_min = ''
-            globals.amount.clear()
-            globals.volume = 0
-        else:
-            ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
-            globals.now_min = ''
-            globals.amount.clear()
+        if tick.close not in globals.amount: #排除重覆資料
             globals.amount.append(tick.close)
-            globals.volume = tick.volume
-            ck.convert_k_bar('5Min')
-            ck.convert_k_bar('15Min')
-            ck.convert_k_bar('30Min')
-            ck.convert_k_bar('60Min')
-            ck.convert_day_k_bar()
+    else:
+        ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
+        globals.now_min = None
+        globals.amount.clear()
+        globals.volume = tick.volume
+        ck.convert_k_bar('5Min')
+        ck.convert_k_bar('15Min')
+        ck.convert_k_bar('30Min')
+        ck.convert_k_bar('60Min')
+        ck.convert_day_k_bar()
 
 threading.Event().wait()
 api.logout()
