@@ -106,47 +106,46 @@ class order():
         '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        print('上線段最後價格:'+str(data['last_high']))
-        print('下線段最後價格:'+str(data['last_low']))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
+        print('現價(內):'+str(self.close))
         if self.has_order == False: #目前沒單
             if data['trend'] == 0: #上空下多做價差
                 print('盤整趨勢')
-                if self.close in range(data['forecast_high'], data['forecast_high']+11):#上線段放空
+                if data['forecast_high']-5 >= self.close >= data['forecast_high']+5:#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
-                elif self.close > data['forecast_high'] +12: #突破上線段買多
+                # elif self.close > data['forecast_high'] +12: #突破上線段買多(突破會賠錢暫不做)
+                #     self.trade(1, 1) #買進多單
+                #     self.has_order = True
+                #     globals.is_break = True
+                elif self.close == data['forecast_low']-5 <= self.close <= data['forecast_low']:#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
-                    globals.is_break = True
-                elif self.close in range(data['forecast_low']-10, data['forecast_low']+1):#下線段買多
-                    self.trade(1, 1) #買進多單
-                    self.has_order = True
-                elif self.close < data['forecast_low']-11: #突破下線段放空
-                    self.trade(1, -1) #買進空單
-                    self.has_order = True
-                    globals.is_break = True
+                # elif self.close < data['forecast_low']-11: #突破下線段放空
+                #     self.trade(1, -1) #買進空單
+                #     self.has_order = True
+                #     globals.is_break = True
                 else:
                     print('條件不符合繼續等')
             elif data['trend'] == 1:#只有在低點買多
                 print('上升趨勢')
-                if self.close in range(data['forecast_low']+1, data['forecast_low']-10):#下線段買多
+                if self.close == data['forecast_low']-5 <= self.close <= data['forecast_low']+5:#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True 
-                elif self.close < data['forecast_low']-11: #突破下線段放空
-                    self.trade(1, -1) #買進空單
-                    self.has_order = True
-                    globals.is_break = True
+                # elif self.close < data['forecast_low']-11: #突破下線段放空
+                #     self.trade(1, -1) #買進空單
+                #     self.has_order = True
+                #     globals.is_break = True
             elif data['trend'] == 2:#只有在高點放空
                 print('下降趨勢')
-                if self.close in range(data['forecast_high'], data['forecast_high']+11):#上線段放空
+                if self.close == data['forecast_high']-5 >= self.close >= data['forecast_high']+5:#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
-                elif self.close > data['forecast_high'] +12: #突破上線段買多
-                    self.trade(1, 1) #買進多單
-                    self.has_order = True
-                    globals.is_break = True
+                # elif self.close > data['forecast_high'] +12: #突破上線段買多
+                #     self.trade(1, 1) #買進多單
+                #     self.has_order = True
+                #     globals.is_break = True
         else:#目前有單
             self.has_order = self.check_trend_loss(data)
 
@@ -214,13 +213,13 @@ class order():
             df = self.df_1day.tail(self.how).reset_index(drop=False)
            
         df_n = df.reset_index()
-        reg_up = linregress(x = df_n.index,y = df_n.close)
+        reg_up = linregress(x=df_n.index, y=df_n.close)
         up_line = reg_up[1] + reg_up[0] * df_n.index
         df_temp_low = df_n[df_n["close"] < up_line]
         df_temp_high = df_n[df_n["close"] > up_line]
         
-        while len(df_temp_low) >= 5 :
-            reg_low = linregress(x = df_temp_low.index,y = df_temp_low.close)
+        while len(df_temp_low) >= 5:
+            reg_low = linregress(x=df_temp_low.index, y=df_temp_low.close)
             up_line_low = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
             df_temp_low = df_n[df_n["close"] < up_line_low]
 
@@ -272,6 +271,7 @@ class order():
             df_n = self.get_trend_data(minute)
             ax[0].clear()
             ax[1].clear()
+            ax[2].clear()
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
@@ -306,7 +306,7 @@ class order():
         ax2.bar(df_n.index, df_n["macd"], width=0.2, label="MACD", alpha=0.7)
         ax2.legend()
         
-        ani = FuncAnimation(fig, update, interval=5000)
+        ani = FuncAnimation(fig, update, interval=600000)
         plt.show()
       
     def get_ps(self,minute):
@@ -342,7 +342,7 @@ class order():
                 if df_trade['type'] == 1: #有單時
                     self.total_lot = 0
                     if df_trade['lot'] == 1: #有多單的處理
-                        if (self.close < (df_trade['price'] - self.loss)):#收盤價 < 買進價格-10點
+                        if (self.close <= (df_trade['price'] - self.loss)):#收盤價 < 買進價格-10點
                             self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                             print('多單停損')
                             self.trade(-1,-1) #多單停損
@@ -364,7 +364,7 @@ class order():
                                     return False
                                 
                     elif df_trade['lot'] == -1: #空單的處理
-                        if (self.close > (df_trade['price'] + self.loss)): 
+                        if (self.close >= (df_trade['price'] + self.loss)): 
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                             print('空單停損')
                             self.trade(-1, 1) #空單回補
@@ -396,7 +396,7 @@ class order():
                     self.total_lot = 0
                     if df_trade['lot'] == 1: #有多單的處理
                         #收盤價 < 買進價格-10點
-                        if (self.close < (df_trade['price'] - self.loss)):
+                        if (self.close <= (df_trade['price'] - self.loss)):
                             self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                             print('多單停損')
                             self.trade(-1,-1) #多單停損
@@ -412,7 +412,7 @@ class order():
                             return self.has_order
                     elif df_trade['lot'] == -1: #空單的處理
                         #收盤價 > 放空價格+10點停損 
-                        if (self.close > (df_trade['price'] + self.loss)): 
+                        if (self.close >= (df_trade['price'] + self.loss)): 
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                             print('空單停損')
                             self.trade(-1, 1) #空單回補
@@ -487,12 +487,12 @@ class order():
         if type == -1:
             msg += '賣'
         if lot == 1:
-            msg += '多'
+            msg += '進'
         if lot == -1 :
-            msg += '空'
+            msg += '出'
         msg += ' | '+str(price)
         if total_lot == 0:
-            msg += ' | 平倉 | 收入:'
+            msg += ' | 收入:'
             msg += str(balance)
         
         msg += ' | 總盈餘:'
