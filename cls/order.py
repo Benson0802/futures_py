@@ -115,6 +115,7 @@ class order():
                 if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
+                    self.total_lot = 1
                 # elif self.close > data['forecast_high'] +12: #突破上線段買多(突破會賠錢暫不做)
                 #     self.trade(1, 1) #買進多單
                 #     self.has_order = True
@@ -122,6 +123,7 @@ class order():
                 elif self.close in range(data['forecast_low']-5 , data['forecast_low']+5):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
+                    self.total_lot = 1
                 # elif self.close < data['forecast_low']-11: #突破下線段放空
                 #     self.trade(1, -1) #買進空單
                 #     self.has_order = True
@@ -133,6 +135,7 @@ class order():
                 if self.close in range(data['forecast_low']-5 , data['forecast_low']+5):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True 
+                    self.total_lot = 1
                 # elif self.close < data['forecast_low']-11: #突破下線段放空
                 #     self.trade(1, -1) #買進空單
                 #     self.has_order = True
@@ -142,6 +145,7 @@ class order():
                 if self.close in range(data['forecast_high']-5 , data['forecast_high']+5):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
+                    self.total_lot = 1
                 # elif self.close > data['forecast_high'] +12: #突破上線段買多
                 #     self.trade(1, 1) #買進多單
                 #     self.has_order = True
@@ -375,19 +379,20 @@ class order():
             df_trade = self.df_trade.iloc[-1]
             if len(df_trade) > 0:
                 if df_trade['type'] == 1: #多單/空單的處理
-                    self.total_lot = 0
                     if df_trade['lot'] == 1: #有多單的處理
                         #收盤價 < 買進價格-10點
                         if (self.close <= (df_trade['price'] - self.loss)):
                             self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                             print('多單停損')
                             self.trade(-1,-1) #多單停損
+                            self.total_lot = 0
                             return False
                         #滿足點h7回補，容許值10點
                         elif self.close in range(fc_data['h7']-10, fc_data['h7']):
                             self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                             print('多單停利')
                             self.trade(-1,-1) #多單停利
+                            self.total_lot = 0
                             return False
                         else:
                             print('等~~')
@@ -398,12 +403,14 @@ class order():
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                             print('空單停損')
                             self.trade(-1, 1) #空單回補
+                            self.total_lot = 0
                             return False
                         # 滿足點l7回補，容許值10點
                         elif self.close in range(fc_data['l7'], fc_data['l7']+10):
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                             print('空單停利')
                             self.trade(-1, 1) #空單停利
+                            self.total_lot = 0
                             return False
                         else:
                             print('等~~'+str(self.has_order))
@@ -474,7 +481,7 @@ class order():
             msg += '出'
         msg += ' | '+str(price)
         if total_lot == 0:
-            msg += ' | 收入:'
+            msg += ' 平倉 | 收入:'
             msg += str(balance)
         
         msg += ' | 總盈餘:'
