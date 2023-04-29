@@ -30,7 +30,7 @@ class order():
             if self.df_trade.iloc[-1]['type'] == 1:
                 self.has_order = True
         self.close = int(close)
-        self.loss = 10 #損失幾點出場
+        self.loss = 20 #損失幾點出場
         self.balance = 0 #賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
         self.total_lot = 0 #目前部位
@@ -97,7 +97,7 @@ class order():
                 self.total_lot = 1
                 self.trade(1,1) #買進多單
                 self.has_order = True
-                  
+                
         return self.has_order
     
     def strategy2(self,minute):
@@ -112,14 +112,14 @@ class order():
         if self.has_order == False: #目前沒單
             if data['trend'] == 0: #上空下多做價差
                 print('盤整趨勢')
-                if data['forecast_high']-5 >= self.close >= data['forecast_high']+5:#上線段放空
+                if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
                 # elif self.close > data['forecast_high'] +12: #突破上線段買多(突破會賠錢暫不做)
                 #     self.trade(1, 1) #買進多單
                 #     self.has_order = True
                 #     globals.is_break = True
-                elif self.close == data['forecast_low']-5 <= self.close <= data['forecast_low']:#下線段買多
+                elif self.close in range(data['forecast_low']-5 , data['forecast_low']+5):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
                 # elif self.close < data['forecast_low']-11: #突破下線段放空
@@ -130,7 +130,7 @@ class order():
                     print('條件不符合繼續等')
             elif data['trend'] == 1:#只有在低點買多
                 print('上升趨勢')
-                if self.close == data['forecast_low']-5 <= self.close <= data['forecast_low']+5:#下線段買多
+                if self.close in range(data['forecast_low']-5 , data['forecast_low']+5):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True 
                 # elif self.close < data['forecast_low']-11: #突破下線段放空
@@ -139,7 +139,7 @@ class order():
                 #     globals.is_break = True
             elif data['trend'] == 2:#只有在高點放空
                 print('下降趨勢')
-                if self.close == data['forecast_high']-5 >= self.close >= data['forecast_high']+5:#上線段放空
+                if self.close in range(data['forecast_high']-5 , data['forecast_high']+5):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
                 # elif self.close > data['forecast_high'] +12: #突破上線段買多
@@ -211,7 +211,8 @@ class order():
         elif minute == 1440:
             self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
             df = self.df_1day.tail(self.how).reset_index(drop=False)
-           
+        
+        #線性回歸計算方式
         df_n = df.reset_index()
         reg_up = linregress(x=df_n.index, y=df_n.close)
         up_line = reg_up[1] + reg_up[0] * df_n.index
@@ -223,13 +224,14 @@ class order():
             up_line_low = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
             df_temp_low = df_n[df_n["close"] < up_line_low]
 
-        while len(df_temp_high) >= 5 :
+        while len(df_temp_high) >= 5:
             reg_high = linregress(x = df_temp_high.index,y = df_temp_high.close)
             up_line_high = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
             df_temp_high = df_n[df_n["close"] > up_line_high]
 
         df_n["low_trend"] = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
+        
         return df_n
     
     def get_trend_line(self,df_n):
@@ -266,7 +268,7 @@ class order():
         '''
         繪製趨勢線
         '''
-        fig, ax = plt.subplots(3, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [4, 1, 1]})
+        fig, ax = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={'height_ratios': [2, 1]})
         def update(_):
             df_n = self.get_trend_data(minute)
             ax[0].clear()
@@ -278,16 +280,6 @@ class order():
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
-            df_n["ema12"] = df_n["close"].ewm(span=12).mean()
-            df_n["ema26"] = df_n["close"].ewm(span=26).mean()
-            df_n["dif"] = df_n["ema12"] - df_n["ema26"]
-            df_n["dea"] = df_n["dif"].ewm(span=9).mean()
-            df_n["macd"] = (df_n["dif"] - df_n["dea"]) * 2
-            ax2 = ax[2].twinx()
-            ax2.plot(df_n.index, df_n["dif"], label="DIF")
-            ax2.plot(df_n.index, df_n["dea"], label="DEA")
-            ax2.bar(df_n.index, df_n["macd"], width=0.2, label="MACD", alpha=0.7)
-            ax2.legend()
             
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
@@ -295,16 +287,6 @@ class order():
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
-        df_n["ema12"] = df_n["close"].ewm(span=12).mean()
-        df_n["ema26"] = df_n["close"].ewm(span=26).mean()
-        df_n["dif"] = df_n["ema12"] - df_n["ema26"]
-        df_n["dea"] = df_n["dif"].ewm(span=9).mean()
-        df_n["macd"] = (df_n["dif"] - df_n["dea"]) * 2
-        ax2 = ax[2].twinx()
-        ax2.plot(df_n.index, df_n["dif"], label="DIF")
-        ax2.plot(df_n.index, df_n["dea"], label="DEA")
-        ax2.bar(df_n.index, df_n["macd"], width=0.2, label="MACD", alpha=0.7)
-        ax2.legend()
         
         ani = FuncAnimation(fig, update, interval=600000)
         plt.show()

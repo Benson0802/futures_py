@@ -28,5 +28,5 @@ import globals
 #     ck.convert_day_k_bar()
 globals.initialize()
 while (True):
-    ord = order(15634)
+    ord = order(15626)
     ord.strategy2(60)
