@@ -60,15 +60,19 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.convert_day_k_bar()
 
     if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
-        ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
-        globals.now_min = None
-        globals.amount.clear()
-        globals.volume = tick.volume
-        ck.convert_k_bar('5Min')
-        ck.convert_k_bar('15Min')
-        ck.convert_k_bar('30Min')
-        ck.convert_k_bar('60Min')
-        ck.convert_day_k_bar()
+        today = datetime.datetime.now().date()
+        kbars = api.kbars(
+        contract=api.Contracts.Futures.MXF.MXFR1,
+        start=today,
+        end=today,
+    )
+    ck = convertK(kbars)
+    ck.write_history_1k_bar()
+    ck.convert_k_bar('5Min')
+    ck.convert_k_bar('15Min')
+    ck.convert_k_bar('30Min')
+    ck.convert_k_bar('60Min')
+    ck.convert_day_k_bar()
 
 threading.Event().wait()
 api.logout()
