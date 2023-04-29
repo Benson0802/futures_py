@@ -41,7 +41,6 @@ class order():
         '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        print(self.fibonacci(minute))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
@@ -164,6 +163,18 @@ class order():
         df_n["low_trend"] = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
         
+        # fib = self.fibonacci(minute)
+        # df_n["h_809"] = fib['h_809']
+        # df_n["h_618"] = fib['h_618']
+        # df_n["h_500"] = fib['h_500']
+        # df_n["h_382"] = fib['h_382']
+        # df_n["h_191"] = fib['h_191']
+        # df_n["l_191"] = fib['l_191']
+        # df_n["l_382"] = fib['l_382']
+        # df_n["l_500"] = fib['l_500']
+        # df_n["l_618"] = fib['l_618']
+        # df_n["l_809"] = fib['l_809']
+        
         return df_n
     
     def get_trend_line(self,df_n):
@@ -209,6 +220,16 @@ class order():
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
+            # ax[0].plot(df_n["h_809"])
+            # ax[0].plot(df_n["h_618"])
+            # ax[0].plot(df_n["h_500"])
+            # ax[0].plot(df_n["h_382"])
+            # ax[0].plot(df_n["h_191"])
+            # ax[0].plot(df_n["l_191"])
+            # ax[0].plot(df_n["l_382"])
+            # ax[0].plot(df_n["l_500"])
+            # ax[0].plot(df_n["l_618"])
+            # ax[0].plot(df_n["l_809"])
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
@@ -216,6 +237,16 @@ class order():
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
+        # ax[0].plot(df_n["h_809"])
+        # ax[0].plot(df_n["h_618"])
+        # ax[0].plot(df_n["h_500"])
+        # ax[0].plot(df_n["h_382"])
+        # ax[0].plot(df_n["h_191"])
+        # ax[0].plot(df_n["l_191"])
+        # ax[0].plot(df_n["l_382"])
+        # ax[0].plot(df_n["l_500"])
+        # ax[0].plot(df_n["l_618"])
+        # ax[0].plot(df_n["l_809"])
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
