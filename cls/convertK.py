@@ -128,7 +128,6 @@ class convertK():
         '''
         把1分k轉為n分k，即時歷史共用
         '''
-        current_time = int(datetime.now().time().strftime("%M"))
         # 讀取要轉換的檔案中最新的一筆k
         file_path = os.path.join('data', minutes + '.csv')
         df = pd.read_csv(file_path, index_col='datetime')
@@ -176,44 +175,3 @@ class convertK():
             resampled_df['close'] = pd.Series(resampled_df['close'],dtype='int32')
             resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
             resampled_df.to_csv(file_path, mode='a', header=False)
-                
-    def convert_history_k_bar(self,time_unit):
-        '''
-        將歷史/即時1分k轉為n分
-        '''
-        # 先讀取5分k的csv最後一筆資料
-        try:
-            last_row = pd.read_csv('data/5Min.csv', index_col='datetime').iloc[-1]
-            last_index = pd.to_datetime(last_row.name)
-            last_values = list(last_row.values)
-        except:
-            last_index = pd.to_datetime('1900-01-01')
-            last_values = [None]*5
-
-        df_1k = pd.read_csv(self.min_path)
-        df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
-        df_1k.set_index('datetime', inplace=True)
-        hlc_dict = {
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum'
-        }
-        if set(['close', 'high', 'low', 'open', 'volume']).issubset(df_1k.columns):
-            # 篩選08:46到13:45的資料
-            df1 = df_1k.between_time('08:46', '13:45')
-            df1 = df1[df1.index > last_index]  # 排除重複的資料
-            # 篩選15:00到23:59以及00:00到05:00的資料
-            #df2 = df_1k.between_time('15:00', '23:59').append(df_1k.between_time('00:00', '05:00'))
-            df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:01', '05:00')])
-            df2 = df2[df2.index >= last_index]  # 排除重複的資料
-            resampled_df1 = df1.resample('5Min', closed='right', label='right').apply(hlc_dict).dropna()
-            resampled_df2 = df2.resample('5Min', closed='right', label='right').apply(hlc_dict).dropna()
-            # 將讀取到的最後一筆資料加入到result之前
-            if last_index in resampled_df1.index:
-                resampled_df1.loc[last_index] = last_values
-            elif last_index in resampled_df2.index:
-                resampled_df2.loc[last_index] = last_values
-            result = pd.concat([resampled_df1, resampled_df2])
-            result.to_csv('data/5Min.csv', mode='a', header=not last_index == pd.to_datetime('1900-01-01').tz_localize('Asia/Taipei'), index_label='datetime')
