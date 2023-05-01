@@ -34,8 +34,21 @@ api.quote.subscribe(
 def quote_callback(exchange:Exchange, tick:TickFOPv1):
     if tick.simtrade == True: return #避開試搓時間
     ck = convertK(tick,True)
-    #寫入csv 比對用
-    ck.write_tick("tick")
+    #最後一盤資料寫入csv
+    if current_time == datetime.time(hour=4, minute=59) or current_time == datetime.time(hour=13, minute=44):
+        ck.write_tick("tick")
+    #最後一盤資料寫入各分k
+    if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
+        ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
+        globals.now_min = None
+        globals.amount.clear()
+        globals.volume = tick.volume
+        ck.convert_k_bar('5Min')
+        ck.convert_k_bar('15Min')
+        ck.convert_k_bar('30Min')
+        ck.convert_k_bar('60Min')
+        ck.convert_day_k_bar()
+        
     globals.now_min = ck.get_now_min()
     globals.tick_min = ck.get_tick_min()
     
@@ -57,16 +70,16 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.convert_k_bar('60Min')
         ck.convert_day_k_bar()
 
-    if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
-        ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
-        globals.now_min = None
-        globals.amount.clear()
-        globals.volume = tick.volume
-        ck.convert_k_bar('5Min')
-        ck.convert_k_bar('15Min')
-        ck.convert_k_bar('30Min')
-        ck.convert_k_bar('60Min')
-        ck.convert_day_k_bar()
+    # if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
+    #     ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
+    #     globals.now_min = None
+    #     globals.amount.clear()
+    #     globals.volume = tick.volume
+    #     ck.convert_k_bar('5Min')
+    #     ck.convert_k_bar('15Min')
+    #     ck.convert_k_bar('30Min')
+    #     ck.convert_k_bar('60Min')
+    #     ck.convert_day_k_bar()
 
 threading.Event().wait()
 api.logout()
