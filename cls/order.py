@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import globals
 import threading
 from matplotlib.animation import FuncAnimation
+import seaborn as sns
+import mplfinance as mpf
+from scipy.fft import fft, fftfreq
 
 class order():
     '''
@@ -34,7 +37,8 @@ class order():
         self.balance = 0 #賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
         self.how = 100 #取幾根k做判斷
-    
+        self.tp = 100 #100點後停利
+        
     def strategy1(self,minute):
         '''
         上升通道及下降通道策略
@@ -74,6 +78,120 @@ class order():
             thread.start()
             globals.has_thread = True
     
+    def strategy2(self, minute):
+        '''
+        傅立葉策略(Fourier model)
+        '''
+        df = None
+        if minute == 1:
+            self.df_1Min = pd.read_csv('data/1Min.csv')
+            self.df_1Min['datetime'] = pd.to_datetime(self.df_60Min['datetime'])
+            self.df_1Min.set_index('datetime', inplace=True)
+            df = self.df_1Min.tail(self.how)
+        elif minute == 5:
+            self.df_5Min = pd.read_csv('data/5Min.csv')
+            self.df_5Min['datetime'] = pd.to_datetime(self.df_60Min['datetime'])
+            self.df_5Min.set_index('datetime', inplace=True)
+            df = self.df_5Min.tail(self.how)
+        elif minute == 15:
+            self.df_15Min = pd.read_csv('data/15Min.csv')
+            self.df_15Min['datetime'] = pd.to_datetime(self.df_60Min['datetime'])
+            self.df_15Min.set_index('datetime', inplace=True)
+            df = self.df_15Min.tail(self.how)
+        elif minute == 30:
+            self.df_30Min = pd.read_csv('data/30Min.csv')
+            self.df_30Min['datetime'] = pd.to_datetime(self.df_60Min['datetime'])
+            self.df_30Min.set_index('datetime', inplace=True)
+            df = self.df_30Min.tail(self.how)
+        elif minute == 60:
+            self.df_60Min = pd.read_csv('data/60Min.csv')
+            self.df_60Min['datetime'] = pd.to_datetime(self.df_60Min['datetime'])
+            self.df_60Min.set_index('datetime', inplace=True)
+            df = self.df_60Min.tail(self.how)
+        elif minute == 1440:
+            self.df_1day = pd.read_csv('data/1Day.csv')
+            self.df_1day['datetime'] = pd.to_datetime(self.df_1day['datetime'])
+            self.df_1day.set_index('datetime', inplace=True)
+            df = self.df_1day.tail(self.how)
+        
+        x = np.arange(0, len(df))
+        y = df['close'].values
+        n_harmonics = 20
+        n_predict = len(df)
+        dt = 1
+        yf = np.fft.fft(y)
+        yf[n_harmonics+1:-n_harmonics] = 0
+        reconstructed_ys = np.fft.ifft(yf)
+        t = np.arange(0, n_predict*dt, dt)
+        y_predict = np.real(reconstructed_ys)[:n_predict]
+        diff = np.diff(y_predict)
+        entry_price = math.ceil(y_predict[-1])
+        stop_loss = 0
+        take_profit = 0
+        if diff[-1] > 0:
+            trend = 'buy'
+            stop_loss = entry_price - self.loss
+            take_profit = entry_price + self.tp
+        else:
+            trend = 'sell'
+            stop_loss = entry_price + self.loss
+            take_profit = entry_price - self.tp
+
+        if self.has_order == False: #目前沒單
+            if trend == 'buy' and self.close in range(entry_price-5 , entry_price+5):
+                print('買進多單')
+                self.trade(1, 1) #買進多單
+                self.has_order = True
+            elif trend == 'sell' and self.close in range(entry_price-5 , entry_price+5):
+                print('買進空單')
+                self.trade(1, -1) #買進空單
+                self.has_order = True
+        else:
+            df_trade = self.df_trade.iloc[-1]
+            if trend == 'buy' and self.close <= stop_loss:#收盤價 < 買進價格-10點
+                print('多單停損')
+                self.balance = ((stop_loss - df_trade['price'])*50)-70 #計算賺賠
+                self.trade(-1,-1) #多單停損
+                self.has_order = False
+            elif trend == 'buy' and self.close >= take_profit:
+                print('多單停利')
+                self.balance = ((take_profit - df_trade['price'])*50)-70 #計算賺賠
+                self.trade(-1,-1) #多單停利
+                self.has_order = False
+            elif trend == 'sell' and self.close >= stop_loss:
+                print('空單停損')
+                self.balance = ((df_trade['price'] - stop_loss)*50)-70 #計算賺賠
+                self.trade(-1,-1) #空單停損
+                self.has_order = False
+            elif trend == 'sell' and self.close <= take_profit:
+                print('空單停利')
+                self.balance = ((df_trade['price'] - take_profit)*50)-70 #計算賺賠
+                self.trade(-1,-1) #空單停利
+                self.has_order = False
+        print('現價:'+str(self.close))
+        print('direction:'+trend)
+        print('entry_price:'+str(entry_price))
+        print('stop_loss:'+str(stop_loss))
+        print('take_profit:'+str(take_profit))
+        
+        if globals.has_thread == False:
+            thread = threading.Thread(target=self.fourier_draw, args=(df, y_predict, n_harmonics, trend, entry_price))
+            thread.start()
+            globals.has_thread = True
+    
+    def fourier_draw(self,df,y_predict,n_harmonics,trend,entry_price):
+        '''
+        Fourier model的繪圖
+        '''
+        fig, ax = plt.subplots(figsize=(15, 8))
+        ax.plot(df.index, df['close'], label='Actual')
+        ax.plot(df.index, y_predict, label='Predicted')
+        ax.set_title(f'Fourier Transform ({n_harmonics} Harmonics) - {trend} @ {entry_price:.0f}')
+        ax.set_xlabel('Datetime')
+        ax.set_ylabel('Price')
+        ax.legend()
+        plt.show()
+        
     def get_last_high_low(self, minute):
         '''
         取得高低差
@@ -164,6 +282,7 @@ class order():
         df_n["high_trend"] = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
         
         # fib = self.fibonacci(minute)
+        # print(fib)
         # df_n["h_809"] = fib['h_809']
         # df_n["h_618"] = fib['h_618']
         # df_n["h_500"] = fib['h_500']
@@ -260,11 +379,12 @@ class order():
         '''
         if self.df_trade.empty is False:
             fib = self.fibonacci(minute)
+            print(fib)
             df_trade = self.df_trade.iloc[-1]
             if len(df_trade) > 0:
                 if df_trade['type'] == 1: #有單時
                     if df_trade['lot'] == 1: #有多單的處理
-                        if (self.close <= (df_trade['price'] - self.loss)):#收盤價 < 買進價格-10點
+                        if self.close <= (df_trade['price'] - self.loss):#收盤價 < 買進價格-n點
                             self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                             print('多單停損')
                             self.trade(-1,-1) #多單停損

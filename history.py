@@ -30,5 +30,5 @@ import datetime
 
 globals.initialize()
 while (True):
-    ord = order(15622)
-    ord.strategy1(60)
+    ord = order(15600)
+    ord.strategy2(60)
