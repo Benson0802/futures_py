@@ -4,7 +4,6 @@ import csv
 from datetime import datetime
 import cls.notify as lineMeg
 import numpy as np
-import time
 from scipy.stats import linregress
 import matplotlib
 matplotlib.use('TkAgg')
@@ -12,9 +11,6 @@ import matplotlib.pyplot as plt
 import globals
 import threading
 from matplotlib.animation import FuncAnimation
-import seaborn as sns
-import mplfinance as mpf
-from scipy.fft import fft, fftfreq
 
 class order():
     '''
@@ -37,7 +33,7 @@ class order():
         self.balance = 0 #賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
         self.how = 100 #取幾根k做判斷
-        self.tp = 100 #100點後停利
+        self.tp = 50 #50點後停利
         
     def strategy1(self,minute):
         '''
@@ -82,6 +78,19 @@ class order():
         '''
         傅立葉策略(Fourier model)
         '''
+        data = self.get_fourier_data(minute)
+        print('現價:'+str(self.close))
+        print('direction:'+data['trend'])
+        print('entry_price:'+str(data['entry_price']))
+        print('stop_loss:'+str(data['stop_loss']))
+        print('take_profit:'+str(data['take_profit']))
+        
+        if globals.has_thread == False:
+            thread = threading.Thread(target=self.fourier_draw, args=(minute,data['df'], data['y_predict'], data['n_harmonics'], data['trend'], data['entry_price']))
+            thread.start()
+            globals.has_thread = True
+    
+    def get_fourier_data(self,minute):
         df = None
         if minute == 1:
             self.df_1Min = pd.read_csv('data/1Min.csv')
@@ -113,7 +122,6 @@ class order():
             self.df_1day['datetime'] = pd.to_datetime(self.df_1day['datetime'])
             self.df_1day.set_index('datetime', inplace=True)
             df = self.df_1day.tail(self.how)
-        
         x = np.arange(0, len(df))
         y = df['close'].values
         n_harmonics = 20
@@ -136,7 +144,10 @@ class order():
             trend = 'sell'
             stop_loss = entry_price + self.loss
             take_profit = entry_price - self.tp
-
+        trend = 'sell'
+        entry_price = 15600
+        stop_loss = 15620
+        take_profit = 15550
         if self.has_order == False: #目前沒單
             if trend == 'buy' and self.close in range(entry_price-5 , entry_price+5):
                 print('買進多單')
@@ -148,48 +159,51 @@ class order():
                 self.has_order = True
         else:
             df_trade = self.df_trade.iloc[-1]
-            if trend == 'buy' and self.close <= stop_loss:#收盤價 < 買進價格-10點
+            if df_trade['lot'] == 1 and self.close <= stop_loss:#收盤價 < 買進價格-10點
                 print('多單停損')
-                self.balance = ((stop_loss - df_trade['price'])*50)-70 #計算賺賠
+                self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                 self.trade(-1,-1) #多單停損
                 self.has_order = False
-            elif trend == 'buy' and self.close >= take_profit:
+            elif df_trade['lot'] == 1 and self.close >= take_profit:
                 print('多單停利')
-                self.balance = ((take_profit - df_trade['price'])*50)-70 #計算賺賠
+                self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                 self.trade(-1,-1) #多單停利
                 self.has_order = False
-            elif trend == 'sell' and self.close >= stop_loss:
+            elif df_trade['lot'] == -1 and self.close >= stop_loss:
                 print('空單停損')
-                self.balance = ((df_trade['price'] - stop_loss)*50)-70 #計算賺賠
+                self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                 self.trade(-1,-1) #空單停損
                 self.has_order = False
-            elif trend == 'sell' and self.close <= take_profit:
+            elif df_trade['lot'] == -1 and self.close <= take_profit:
                 print('空單停利')
                 self.balance = ((df_trade['price'] - take_profit)*50)-70 #計算賺賠
                 self.trade(-1,-1) #空單停利
                 self.has_order = False
-        print('現價:'+str(self.close))
-        print('direction:'+trend)
-        print('entry_price:'+str(entry_price))
-        print('stop_loss:'+str(stop_loss))
-        print('take_profit:'+str(take_profit))
-        
-        if globals.has_thread == False:
-            thread = threading.Thread(target=self.fourier_draw, args=(df, y_predict, n_harmonics, trend, entry_price))
-            thread.start()
-            globals.has_thread = True
+                
+        return {"df": df, "y_predict": y_predict, 'n_harmonics':n_harmonics,'trend':trend ,'entry_price': entry_price,'stop_loss':stop_loss,'take_profit':take_profit}
     
-    def fourier_draw(self,df,y_predict,n_harmonics,trend,entry_price):
+    def fourier_draw(self,minute,df,y_predict,n_harmonics,trend,entry_price):
         '''
         Fourier model的繪圖
         '''
         fig, ax = plt.subplots(figsize=(15, 8))
+        
+        def update(_):
+            df_n = self.get_fourier_data(minute)
+            ax.plot(df.index, df['close'], label='Actual')
+            ax.plot(df.index, y_predict, label='Predicted')
+            ax.set_title(str(globals.code)+"-"+str(minute)+'Min')
+            ax.set_xlabel('Datetime')
+            ax.set_ylabel('Price')
+            ax.legend()
+        
         ax.plot(df.index, df['close'], label='Actual')
         ax.plot(df.index, y_predict, label='Predicted')
-        ax.set_title(f'Fourier Transform ({n_harmonics} Harmonics) - {trend} @ {entry_price:.0f}')
+        ax.set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax.set_xlabel('Datetime')
         ax.set_ylabel('Price')
         ax.legend()
+        ani = FuncAnimation(fig, update, interval=600000)
         plt.show()
         
     def get_last_high_low(self, minute):
@@ -335,7 +349,7 @@ class order():
             df_n = self.get_trend_data(minute)
             ax[0].clear()
             ax[1].clear()
-            ax[2].clear()
+            # ax[2].clear()
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])

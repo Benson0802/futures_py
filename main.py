@@ -7,7 +7,7 @@ from cls.convertK import convertK
 from cls.order import order
 import datetime
 import globals
-
+import pandas as pd
 globals.initialize()
 obj = check_opening()
 year_mon = obj.get_year_mon()
@@ -39,7 +39,16 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.write_tick("tick")
     #最後一盤資料寫入各分k
     if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
-        ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
+        df_tick = pd.read_csv('data/tick.csv', index_col='datetime')
+        globals.amount.clear()
+        globals.volume = tick.volume
+        for index, row in df_tick.iterrows():
+            globals.amount.append(row['close'])
+            globals.volume += row['volume']
+            
+        now = datetime.datetime.now()
+        tick_min  = now.strftime('%Y/%m/%d %H:%M')
+        ck.write_1k_bar(tick_min,globals.volume,globals.amount)
         globals.now_min = None
         globals.amount.clear()
         globals.volume = tick.volume
@@ -60,7 +69,7 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
         #策略判斷
         ord = order(tick.close)
-        ord.strategy1(60)
+        ord.strategy2(60)
         globals.now_min = None
         globals.amount.clear()
         globals.volume = tick.volume
@@ -70,16 +79,16 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.convert_k_bar('60Min')
         ck.convert_day_k_bar()
 
-    # if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
-    #     ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
-    #     globals.now_min = None
-    #     globals.amount.clear()
-    #     globals.volume = tick.volume
-    #     ck.convert_k_bar('5Min')
-    #     ck.convert_k_bar('15Min')
-    #     ck.convert_k_bar('30Min')
-    #     ck.convert_k_bar('60Min')
-    #     ck.convert_day_k_bar()
+    if current_time == datetime.time(hour=5, minute=0) or current_time == datetime.time(hour=13, minute=45):
+        ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
+        globals.now_min = None
+        globals.amount.clear()
+        globals.volume = tick.volume
+        ck.convert_k_bar('5Min')
+        ck.convert_k_bar('15Min')
+        ck.convert_k_bar('30Min')
+        ck.convert_k_bar('60Min')
+        ck.convert_day_k_bar()
 
 threading.Event().wait()
 api.logout()
