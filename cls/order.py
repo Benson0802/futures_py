@@ -42,6 +42,7 @@ class order():
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
         power_k = self.power_kbar(30) #加入能量k棒的判斷
+        print(power_k)
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
@@ -54,10 +55,10 @@ class order():
                 elif self.close in range(data['forecast_low'] , data['forecast_low']+10):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
-                elif power_k['ll'] <= self.close: #買進多單
+                elif self.close in range(power_k['ll'] - 5, power_k['ll'] + 5) : #買進多單
                     self.trade(1, 1) #買進多單
                     self.has_order = True
-                elif self.close >= power_k['hh']: #買進空單
+                elif self.close in range(power_k['hh'] - 5 , power_k['hh'] + 5) : #買進空單
                     self.trade(1, -1) #買進空單
                     self.has_order = True
                 else:
@@ -67,7 +68,7 @@ class order():
                 if self.close in range(data['forecast_low'] , data['forecast_low']+10):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
-                elif power_k['ll'] <= self.close: #買進多單
+                elif self.close in range(power_k['ll']-1, power_k['ll']+5): #買進多單
                     self.trade(1, 1) #買進多單
                     self.has_order = True
             elif data['trend'] == 2:#只有在高點放空
@@ -75,7 +76,7 @@ class order():
                 if self.close in range(data['forecast_high'] , data['forecast_high']+10):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
-                elif self.close >= power_k['hh']: #買進空單
+                elif self.close in range(power_k['hh']-5, power_k['hh']+5): #買進空單
                     self.trade(1, -1) #買進空單
                     self.has_order = True
         else:#目前有單
@@ -128,7 +129,6 @@ class order():
             df = self.df_1day.iloc[-2]
         
         volume = float(str(df['volume'])[0] + '.' + str(df['volume'])[1:]) if int(str(df['volume'])[0]) < 6 else float('0.' + str(df['volume']))
-        print(volume)
         power = math.ceil((df['high'] - df['low']) * volume)
         hh = math.ceil(df['high'] + power)
         h = math.ceil(df['close'] + power)
@@ -480,19 +480,19 @@ class order():
                         if data['trend'] == 0 or data['trend'] == 1: #盤整或上升趨勢則上線段停利
                             if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段停利(容許值上下五點)
                                 self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
-                                print('多單停利')
+                                print('多單停利-趨勢線上')
                                 self.trade(-1,-1) #多單停利
                                 return False
-                            elif self.close > df_trade['price'] and self.close in range(power_k['h'], power_k['hh']):#能量k棒計算出來的高點
+                            elif self.close > df_trade['price'] and self.close in range(power_k['h'] , power_k['hh']):#能量k棒計算出來的高點
                                 self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
-                                print('多單停利')
+                                print('多單停利-能量k棒範圍')
                                 self.trade(-1,-1) #多單停利
                                 return False
                                 
                     elif df_trade['lot'] == -1: #空單的處理
                         if (self.close >= (df_trade['price'] + self.loss)): 
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
-                            print('空單停損')
+                            print('空單停損4')
                             self.trade(-1, 1) #空單回補
                             return False
                         
@@ -500,12 +500,12 @@ class order():
                         if data['trend'] == 0 or data['trend'] == 2: #盤整或下降趨勢則下線段停利
                             if self.close in range(data['forecast_low']-5, data['forecast_low']+5):#下線段停利(容許值上下五點)
                                 self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
-                                print('空單停利')
+                                print('空單停利-趨勢線')
                                 self.trade(-1, 1) #空單停利
                                 return False
                             elif self.close < df_trade['price'] and self.close in range(power_k['l'], power_k['ll']):#能量k棒計算出來的低點
                                 self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
-                                print('空單停利')
+                                print('空單停利-能量k棒')
                                 self.trade(-1, 1) #空單停利
                                 return False
 
