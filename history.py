@@ -16,9 +16,9 @@ with open('API_KEY.json', 'r') as f:
     )
 
     kbars = api.kbars(
-        contract=api.Contracts.Futures.MXF.MXFR1,
+        contract=api.Contracts.Futures.TXF.TXFR1,
         start='2023-05-02',
-        end='2023-05-03',
+        end='2023-05-07',
     )
     ck = convertK(kbars)
     ck.write_history_1k_bar()
@@ -31,4 +31,5 @@ with open('API_KEY.json', 'r') as f:
 # globals.initialize()
 # while (True):
 #     ord = order(15500)
-#     ord.strategy2(60)
+#     p = ord.power_kbar(15)
+#     print(p)

@@ -90,6 +90,40 @@ class order():
             thread.start()
             globals.has_thread = True
     
+    def power_kbar(self,minute):
+        '''
+        能量K棒計算
+        '''
+        df = None
+        if minute == 1:
+            self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
+            df = self.df_1Min.iloc[-2]
+        elif minute == 5:
+            self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
+            df = self.df_5Min.iloc[-2]
+        elif minute == 15:
+            self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
+            df = self.df_15Min.iloc[-2]
+        elif minute == 30:
+            self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
+            df = self.df_30Min.iloc[-2]
+        elif minute == 60:
+            self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
+            df = self.df_60Min.iloc[-2]
+        elif minute == 1440:
+            self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
+            df = self.df_1day.iloc[-2]
+
+        power = math.ceil((df['high'] - df['low']) * (df['volume'] * 0.001))
+        hh = math.ceil(df['high'] + power)
+        h = math.ceil(df['close'] + power)
+        l = math.ceil(df['close'] - power)
+        ll = math.ceil(df['low'] - power)
+        op_h = math.ceil(df['low'] + power)
+        op_l = math.ceil(df['high'] - power)
+        return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
+        #return {"power:":power, "hh": hh, "h": h, 'l':l,'ll':ll ,'op_h': op_h,'op_l':op_l}
+        
     def get_fourier_data(self,minute):
         df = None
         if minute == 1:
@@ -144,41 +178,40 @@ class order():
             trend = 'sell'
             stop_loss = entry_price + self.loss
             take_profit = entry_price - self.tp
-        trend = 'sell'
-        entry_price = 15600
-        stop_loss = 15620
-        take_profit = 15550
+            
+        print(trend)
         if self.has_order == False: #目前沒單
-            if trend == 'buy' and self.close in range(entry_price-5 , entry_price+5):
+            if trend == 'buy' and (self.close in range(entry_price-5 , entry_price+5) or self.close in range(stop_loss , entry_price)):
                 print('買進多單')
                 self.trade(1, 1) #買進多單
                 self.has_order = True
-            elif trend == 'sell' and self.close in range(entry_price-5 , entry_price+5):
+            elif trend == 'sell' and (self.close in range(entry_price-5 , entry_price+5) or self.close in range(stop_loss , entry_price)):
                 print('買進空單')
                 self.trade(1, -1) #買進空單
                 self.has_order = True
         else:
             df_trade = self.df_trade.iloc[-1]
-            if df_trade['lot'] == 1 and self.close <= stop_loss:#收盤價 < 買進價格-10點
-                print('多單停損')
-                self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
-                self.trade(-1,-1) #多單停損
-                self.has_order = False
-            elif df_trade['lot'] == 1 and self.close >= take_profit:
-                print('多單停利')
-                self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
-                self.trade(-1,-1) #多單停利
-                self.has_order = False
-            elif df_trade['lot'] == -1 and self.close >= stop_loss:
-                print('空單停損')
-                self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
-                self.trade(-1,-1) #空單停損
-                self.has_order = False
-            elif df_trade['lot'] == -1 and self.close <= take_profit:
-                print('空單停利')
-                self.balance = ((df_trade['price'] - take_profit)*50)-70 #計算賺賠
-                self.trade(-1,-1) #空單停利
-                self.has_order = False
+            if len(df_trade) > 0:
+                if df_trade['lot'] == 1 and self.close <= stop_loss:#收盤價 < 買進價格-10點
+                    print('多單停損')
+                    self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                    self.trade(-1,-1) #多單停損
+                    self.has_order = False
+                elif df_trade['lot'] == 1 and self.close >= take_profit:
+                    print('多單停利')
+                    self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
+                    self.trade(-1,-1) #多單停利
+                    self.has_order = False
+                elif df_trade['lot'] == -1 and self.close >= stop_loss:
+                    print('空單停損')
+                    self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
+                    self.trade(-1,-1) #空單停損
+                    self.has_order = False
+                elif df_trade['lot'] == -1 and self.close <= take_profit:
+                    print('空單停利')
+                    self.balance = ((df_trade['price'] - take_profit)*50)-70 #計算賺賠
+                    self.trade(-1,-1) #空單停利
+                    self.has_order = False
                 
         return {"df": df, "y_predict": y_predict, 'n_harmonics':n_harmonics,'trend':trend ,'entry_price': entry_price,'stop_loss':stop_loss,'take_profit':take_profit}
     
@@ -190,6 +223,7 @@ class order():
         
         def update(_):
             df_n = self.get_fourier_data(minute)
+            ax.clear()
             ax.plot(df.index, df['close'], label='Actual')
             ax.plot(df.index, y_predict, label='Predicted')
             ax.set_title(str(globals.code)+"-"+str(minute)+'Min')
@@ -295,13 +329,13 @@ class order():
         df_n["low_trend"] = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
         
-        # fib = self.fibonacci(minute)
-        # print(fib)
-        # df_n["h_809"] = fib['h_809']
-        # df_n["h_618"] = fib['h_618']
-        # df_n["h_500"] = fib['h_500']
-        # df_n["h_382"] = fib['h_382']
-        # df_n["h_191"] = fib['h_191']
+        fib = self.fibonacci(minute)
+        print(fib)
+        df_n["h_809"] = fib['h_809']
+        df_n["h_618"] = fib['h_618']
+        df_n["h_500"] = fib['h_500']
+        df_n["h_382"] = fib['h_382']
+        df_n["h_191"] = fib['h_191']
         # df_n["l_191"] = fib['l_191']
         # df_n["l_382"] = fib['l_382']
         # df_n["l_500"] = fib['l_500']
@@ -349,15 +383,14 @@ class order():
             df_n = self.get_trend_data(minute)
             ax[0].clear()
             ax[1].clear()
-            # ax[2].clear()
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
-            # ax[0].plot(df_n["h_809"])
-            # ax[0].plot(df_n["h_618"])
-            # ax[0].plot(df_n["h_500"])
-            # ax[0].plot(df_n["h_382"])
-            # ax[0].plot(df_n["h_191"])
+            ax[0].plot(df_n["h_809"])
+            ax[0].plot(df_n["h_618"])
+            ax[0].plot(df_n["h_500"])
+            ax[0].plot(df_n["h_382"])
+            ax[0].plot(df_n["h_191"])
             # ax[0].plot(df_n["l_191"])
             # ax[0].plot(df_n["l_382"])
             # ax[0].plot(df_n["l_500"])
@@ -370,11 +403,11 @@ class order():
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
-        # ax[0].plot(df_n["h_809"])
-        # ax[0].plot(df_n["h_618"])
-        # ax[0].plot(df_n["h_500"])
-        # ax[0].plot(df_n["h_382"])
-        # ax[0].plot(df_n["h_191"])
+        ax[0].plot(df_n["h_809"])
+        ax[0].plot(df_n["h_618"])
+        ax[0].plot(df_n["h_500"])
+        ax[0].plot(df_n["h_382"])
+        ax[0].plot(df_n["h_191"])
         # ax[0].plot(df_n["l_191"])
         # ax[0].plot(df_n["l_382"])
         # ax[0].plot(df_n["l_500"])
