@@ -34,39 +34,52 @@ class order():
         self.total_balance = self.df_trade['balance'].sum() #總賺賠
         self.how = 100 #取幾根k做判斷
         self.tp = 50 #50點後停利
-        
+    
     def strategy1(self,minute):
         '''
         上升通道及下降通道策略
         '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
+        power_k = self.power_kbar(30) #加入能量k棒的判斷
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
         if self.has_order == False: #目前沒單
             if data['trend'] == 0: #上空下多做價差
                 print('盤整趨勢')
-                if self.close in range(data['forecast_high']-5, data['forecast_high']+5):#上線段放空
+                if self.close in range(data['forecast_high'], data['forecast_high']+10):#上線段放空
                     self.trade(1, -1) #買進空單
                     self.has_order = True
-                elif self.close in range(data['forecast_low']-5 , data['forecast_low']+5):#下線段買多
+                elif self.close in range(data['forecast_low'] , data['forecast_low']+10):#下線段買多
                     self.trade(1, 1) #買進多單
+                    self.has_order = True
+                elif power_k['ll'] <= self.close: #買進多單
+                    self.trade(1, 1) #買進多單
+                    self.has_order = True
+                elif self.close >= power_k['hh']: #買進空單
+                    self.trade(1, -1) #買進空單
                     self.has_order = True
                 else:
                     print('條件不符合繼續等')
             elif data['trend'] == 1:#只有在低點買多
                 print('上升趨勢')
-                if self.close in range(data['forecast_low']-5 , data['forecast_low']+5):#下線段買多
+                if self.close in range(data['forecast_low'] , data['forecast_low']+10):#下線段買多
                     self.trade(1, 1) #買進多單
-                    self.has_order = True 
+                    self.has_order = True
+                elif power_k['ll'] <= self.close: #買進多單
+                    self.trade(1, 1) #買進多單
+                    self.has_order = True
             elif data['trend'] == 2:#只有在高點放空
                 print('下降趨勢')
-                if self.close in range(data['forecast_high']-5 , data['forecast_high']+5):#上線段放空
+                if self.close in range(data['forecast_high'] , data['forecast_high']+10):#上線段放空
+                    self.trade(1, -1) #買進空單
+                    self.has_order = True
+                elif self.close >= power_k['hh']: #買進空單
                     self.trade(1, -1) #買進空單
                     self.has_order = True
         else:#目前有單
-            self.has_order = self.check_trend_loss(data,minute)
+            self.has_order = self.check_trend_loss(data,minute,power_k)
 
         
         if globals.has_thread == False:
@@ -113,16 +126,18 @@ class order():
         elif minute == 1440:
             self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
             df = self.df_1day.iloc[-2]
-
-        power = math.ceil((df['high'] - df['low']) * (df['volume'] * 0.001))
+        
+        volume = float(str(df['volume'])[0] + '.' + str(df['volume'])[1:]) if int(str(df['volume'])[0]) < 6 else float('0.' + str(df['volume']))
+        print(volume)
+        power = math.ceil((df['high'] - df['low']) * volume)
         hh = math.ceil(df['high'] + power)
         h = math.ceil(df['close'] + power)
         l = math.ceil(df['close'] - power)
         ll = math.ceil(df['low'] - power)
         op_h = math.ceil(df['low'] + power)
         op_l = math.ceil(df['high'] - power)
-        return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
-        #return {"power:":power, "hh": hh, "h": h, 'l':l,'ll':ll ,'op_h': op_h,'op_l':op_l}
+        # return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
+        return {"power:":power, "hh": hh, "h": h, 'l':l,'ll':ll ,'op_h': op_h,'op_l':op_l}
         
     def get_fourier_data(self,minute):
         df = None
@@ -329,18 +344,29 @@ class order():
         df_n["low_trend"] = (reg_low[1] + reg_low[0] * pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high[1] + reg_high[0] * pd.Series(df_n.index)).round().astype(int)
         
-        fib = self.fibonacci(minute)
-        print(fib)
-        df_n["h_809"] = fib['h_809']
-        df_n["h_618"] = fib['h_618']
-        df_n["h_500"] = fib['h_500']
-        df_n["h_382"] = fib['h_382']
-        df_n["h_191"] = fib['h_191']
+        # 黃金分割率
+        # fib = self.fibonacci(minute)
+        # print(fib)
+        # df_n["h_809"] = fib['h_809']
+        # df_n["h_618"] = fib['h_618']
+        # df_n["h_500"] = fib['h_500']
+        # df_n["h_382"] = fib['h_382']
+        # df_n["h_191"] = fib['h_191']
         # df_n["l_191"] = fib['l_191']
         # df_n["l_382"] = fib['l_382']
         # df_n["l_500"] = fib['l_500']
         # df_n["l_618"] = fib['l_618']
         # df_n["l_809"] = fib['l_809']
+        
+        #能量k棒
+        # power_k = self.power_kbar(1440)
+        # print(power_k)
+        # df_n['hh'] = power_k['hh']
+        # df_n['h'] = power_k['h']
+        # df_n['l'] = power_k['l']
+        # df_n['ll'] = power_k['ll']
+        # df_n['op_h'] = power_k['op_h']
+        # df_n['op_l'] = power_k['op_l']
         
         return df_n
     
@@ -386,11 +412,17 @@ class order():
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
-            ax[0].plot(df_n["h_809"])
-            ax[0].plot(df_n["h_618"])
-            ax[0].plot(df_n["h_500"])
-            ax[0].plot(df_n["h_382"])
-            ax[0].plot(df_n["h_191"])
+            # ax[0].plot(df_n['hh'])
+            # ax[0].plot(df_n['h'])
+            # ax[0].plot(df_n['l'])
+            # ax[0].plot(df_n['ll'])
+            # ax[0].plot(df_n['op_h'])
+            # ax[0].plot(df_n['op_l'])
+            # ax[0].plot(df_n["h_809"])
+            # ax[0].plot(df_n["h_618"])
+            # ax[0].plot(df_n["h_500"])
+            # ax[0].plot(df_n["h_382"])
+            # ax[0].plot(df_n["h_191"])
             # ax[0].plot(df_n["l_191"])
             # ax[0].plot(df_n["l_382"])
             # ax[0].plot(df_n["l_500"])
@@ -403,11 +435,17 @@ class order():
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
-        ax[0].plot(df_n["h_809"])
-        ax[0].plot(df_n["h_618"])
-        ax[0].plot(df_n["h_500"])
-        ax[0].plot(df_n["h_382"])
-        ax[0].plot(df_n["h_191"])
+        # ax[0].plot(df_n['hh'])
+        # ax[0].plot(df_n['h'])
+        # ax[0].plot(df_n['l'])
+        # ax[0].plot(df_n['ll'])
+        # ax[0].plot(df_n['op_h'])
+        # ax[0].plot(df_n['op_l'])
+        # ax[0].plot(df_n["h_809"])
+        # ax[0].plot(df_n["h_618"])
+        # ax[0].plot(df_n["h_500"])
+        # ax[0].plot(df_n["h_382"])
+        # ax[0].plot(df_n["h_191"])
         # ax[0].plot(df_n["l_191"])
         # ax[0].plot(df_n["l_382"])
         # ax[0].plot(df_n["l_500"])
@@ -420,13 +458,14 @@ class order():
         ani = FuncAnimation(fig, update, interval=600000)
         plt.show()
           
-    def check_trend_loss(self,data,minute):
+    def check_trend_loss(self,data,minute,power_k):
         '''
         依趨勢線出場或停損
         '''
         if self.df_trade.empty is False:
-            fib = self.fibonacci(minute)
-            print(fib)
+            # 改用能量k棒判斷停利點
+            # fib = self.fibonacci(minute)
+            # print(fib)
             df_trade = self.df_trade.iloc[-1]
             if len(df_trade) > 0:
                 if df_trade['type'] == 1: #有單時
@@ -444,11 +483,10 @@ class order():
                                 print('多單停利')
                                 self.trade(-1,-1) #多單停利
                                 return False
-                            elif self.close > df_trade['price'] and self.close in range(fib['h_618']-5, fib['h_618']+5):#0.618當停利點
+                            elif self.close > df_trade['price'] and self.close in range(power_k['h'], power_k['hh']):#能量k棒計算出來的高點
                                 self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                                 print('多單停利')
                                 self.trade(-1,-1) #多單停利
-
                                 return False
                                 
                     elif df_trade['lot'] == -1: #空單的處理
@@ -465,7 +503,7 @@ class order():
                                 print('空單停利')
                                 self.trade(-1, 1) #空單停利
                                 return False
-                            elif self.close < df_trade['price'] and self.close in range(fib['l_618']-5, fib['l_618']+5):#0.618當停利點
+                            elif self.close < df_trade['price'] and self.close in range(power_k['l'], power_k['ll']):#能量k棒計算出來的低點
                                 self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                                 print('空單停利')
                                 self.trade(-1, 1) #空單停利

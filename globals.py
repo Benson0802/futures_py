@@ -6,6 +6,7 @@ def initialize():
     global amount #這一分鐘收集的tick收盤價
     global is_break #是否突破
     global code #台指期月份
+    global is_backtest #是否回測
     has_thread = False
     now_min = None
     tick_min = None
@@ -13,3 +14,4 @@ def initialize():
     amount = []
     is_break = False
     code = ''
+    is_backtest = False
