@@ -1,7 +1,7 @@
 import shioaji as sj
 import json
 from cls.convertK import convertK
-from cls.order import order
+from cls.tactics.aisle import aisle
 import globals
 import datetime
 
@@ -30,5 +30,5 @@ import datetime
 
 globals.initialize()
 while (True):
-    ord = order(15808)
-    ord.strategy1(60)
+    ord = aisle(15808)
+    ord.run(60)

@@ -7,6 +7,7 @@ def initialize():
     global is_break #是否突破
     global code #台指期月份
     global is_backtest #是否回測
+    global how #取幾根k棒
     has_thread = False
     now_min = None
     tick_min = None
@@ -15,3 +16,4 @@ def initialize():
     is_break = False
     code = ''
     is_backtest = False
+    how = 100
