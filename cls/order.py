@@ -68,7 +68,7 @@ class order():
                 if self.close in range(data['forecast_low'] , data['forecast_low']+10):#下線段買多
                     self.trade(1, 1) #買進多單
                     self.has_order = True
-                elif self.close in range(power_k['ll']-1, power_k['ll']+5): #買進多單
+                elif self.close in range(power_k['ll']-5, power_k['ll']+5): #買進多單
                     self.trade(1, 1) #買進多單
                     self.has_order = True
             elif data['trend'] == 2:#只有在高點放空
@@ -483,12 +483,12 @@ class order():
                                 print('多單停利-趨勢線上')
                                 self.trade(-1,-1) #多單停利
                                 return False
-                            elif self.close > df_trade['price'] and self.close in range(power_k['h'] , power_k['hh']):#能量k棒計算出來的高點
+                            elif self.close >= power_k['hh'] or self.close in range(power_k['h'] , power_k['hh']):#能量k棒計算出來的高點
                                 self.balance = ((self.close - df_trade['price'])*50)-70 #計算賺賠
                                 print('多單停利-能量k棒範圍')
                                 self.trade(-1,-1) #多單停利
                                 return False
-                                
+                             
                     elif df_trade['lot'] == -1: #空單的處理
                         if (self.close >= (df_trade['price'] + self.loss)): 
                             self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
@@ -503,7 +503,7 @@ class order():
                                 print('空單停利-趨勢線')
                                 self.trade(-1, 1) #空單停利
                                 return False
-                            elif self.close < df_trade['price'] and self.close in range(power_k['l'], power_k['ll']):#能量k棒計算出來的低點
+                            elif self.close <= power_k['ll'] or self.close in range(power_k['l'], power_k['ll']):#能量k棒計算出來的低點
                                 self.balance = ((df_trade['price'] - self.close)*50)-70 #計算賺賠
                                 print('空單停利-能量k棒')
                                 self.trade(-1, 1) #空單停利
