@@ -11,10 +11,8 @@ import matplotlib.pyplot as plt
 import globals
 import threading
 from matplotlib.animation import FuncAnimation
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Conv1D, MaxPooling1D, Flatten
-import os.path
+from keras.models import Sequential
+from keras.layers import Conv1D, MaxPooling1D, LSTM, Dropout, Dense
 
 class aisle():
     '''
@@ -45,6 +43,15 @@ class aisle():
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
         power_k = self.power_kbar(30)  # 加入能量k棒的判斷
+        # 學習破底翻及假突破的辨識
+        forecast = self.forecast(minute)
+        sign = '沒突破訊號'
+        if forecast == 1:
+            sign = '破底翻'
+        elif forecast == 2:
+            sign = '假突破'
+            
+        print(sign)
         print(power_k)
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
@@ -59,12 +66,6 @@ class aisle():
                 # 下線段買多
                 elif self.close in range(data['forecast_low'], data['forecast_low']+10):
                     self.trade(1, 1)  # 買進多單
-                    self.has_order = True
-                elif self.close in range(power_k['ll'] - 5, power_k['ll'] + 5):  # 買進多單
-                    self.trade(1, 1)  # 買進多單
-                    self.has_order = True
-                elif self.close in range(power_k['hh'] - 5, power_k['hh'] + 5):  # 買進空單
-                    self.trade(1, -1)  # 買進空單
                     self.has_order = True
                 else:
                     print('條件不符合繼續等')
@@ -88,13 +89,10 @@ class aisle():
                     self.has_order = True
         else:  # 目前有單
             self.has_order = self.check_trend_loss(data, minute, power_k)
-
-        # 預測下個60k
-        forecast = self.forecast(minute)
+        
         with open('data/forecast.csv', 'a', encoding='utf-8', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([trend_line.iloc[-1]['datetime'],forecast])
-        print('預測下個時間點:'+str(forecast))
+            writer.writerow([datetime.now().strftime('%Y/%m/%d %H:%M'),sign])
         
         if globals.has_thread == False:
             thread = threading.Thread(
@@ -152,55 +150,56 @@ class aisle():
             df = pd.read_csv('data/60Min.csv')
         elif minute == 1440:
             df = pd.read_csv('data/1Day.csv')
-        # 將日期欄位轉換為datetime型態
-        df['datetime'] = pd.to_datetime(df['datetime'])
+            
+        data = df.values
 
-        # 將datetime欄位設為index
-        df = df.set_index('datetime')
-        # 訓練集和測試集的比例
-        train_size = 0.8
+        x = data[:, 1:6]
+        y = np.zeros(data.shape[0])
+        # 定義破底翻、假突破
+        for i in range(2, data.shape[0]):
+            if data[i, 4] > min(data[i-1, 3], data[i-2, 3]) and data[i-1, 4] < data[i-1, 1] and data[i-2, 4] < data[i-2, 1]:
+                y[i] = 1 # 破底翻
+            elif data[i, 4] < max(data[i-1, 2], data[i-2, 2]) and data[i-1, 4] > data[i-1, 1] and data[i-2, 4] > data[i-2, 1]:
+                y[i] = -1 # 假突破
+                
+        # 資料重塑
+        timesteps = 2 # 定義每個樣本的時間步數
+        features = x.shape[1] # 每個時間步數包含的特徵
+        samples = x.shape[0] - timesteps + 1 # 樣本數
+        x_reshape = np.zeros((samples, timesteps, features)) # 重塑後的輸入特徵
+        y_reshape = np.zeros(samples) # 重塑的標籤
+        for i in range(samples):
+            x_reshape[i] = x[i:i+timesteps]
+            y_reshape[i] = y[i+timesteps-1]
+        
+        # 訓練
+        split_ratio = 0.8
+        split_index = int(samples * split_ratio)
+        x_train = x_reshape[:split_index]
 
-        # 將資料集分割為訓練集和測試集
-        train_df = df[:int(len(df)*train_size)]
-        test_df = df[int(len(df)*train_size):]
-
-        # 轉換資料集格式
-        def create_dataset(X, y, time_steps=1):
-            Xs, ys = [], []
-            for i in range(len(X) - time_steps):
-                v = X.iloc[i:(i + time_steps)].values
-                Xs.append(v)
-                ys.append(y.iloc[i + time_steps])
-            return np.array(Xs), np.array(ys)
-
-        # 設定時間步長
-        TIME_STEPS = 3
-
-        # 將訓練集和測試集轉換為X和y格式
-        X_train, y_train = create_dataset(train_df, train_df['close'], TIME_STEPS)
-        X_test, y_test = create_dataset(test_df, test_df['close'], TIME_STEPS)
-
-        # 使用MinMaxScaler進行標準化
-        scaler = MinMaxScaler()
-        X_train = scaler.fit_transform(X_train.reshape(-1, 1)).reshape(X_train.shape)
-        X_test = scaler.transform(X_test.reshape(-1, 1)).reshape(X_test.shape)
-
-        # 建立模型
+        y_train = y_reshape[:split_index]
+        x_test = x_reshape[split_index:]
+        y_test = y_reshape[split_index:]
+        
         model = Sequential()
-        model.add(Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(TIME_STEPS, X_train.shape[2])))
+        model.add(Conv1D(filters=32, kernel_size=1, strides=1, activation="relu", input_shape=(timesteps, features)))
         model.add(MaxPooling1D(pool_size=2))
-        model.add(Flatten())
-        model.add(Dense(50, activation='relu'))
-        model.add(Dense(1))
-        model.compile(optimizer='adam', loss='mse')
+        model.add(LSTM(units=64, return_sequences=False))
+        model.add(Dropout(rate=0.2))
+        model.add(Dense(units=1, activation="tanh"))
+        model.compile(optimizer="adam", loss="mse", metrics=["accuracy"])
+        model.fit(x_train, y_train, batch_size=32, epochs=10, validation_data=(x_test, y_test))
+        model.evaluate(x_test, y_test)
+        
+        last = df.tail(2).reset_index(drop=True)
+        x_new = np.array([last[['open', 'high', 'low', 'close', 'volume']].values])
+        y_pred = model.predict(x_new)
+        result = 0 #0沒有訊號  1破底翻  2假突破
+        if y_pred > 0.5:
+            result = 1
+        elif y_pred < -0.5:
+            result = 2
 
-        # 訓練模型
-        model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=1)
-
-        # 使用訓練好的模型進行預測
-        last_data = df.iloc[-TIME_STEPS:]
-        last_data_scaled = scaler.transform(last_data.values.reshape(-1, 1)).reshape(1, TIME_STEPS, last_data.shape[1])
-        result = math.ceil(model.predict(last_data_scaled)[0][0])
         return result
         
         
