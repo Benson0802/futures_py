@@ -42,9 +42,10 @@ class aisle():
         '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
+        power_k = None
         power_k = self.power_kbar(30)  # 加入能量k棒的判斷
         # 學習破底翻及假突破的辨識
-        forecast = self.forecast(minute)
+        forecast = self.forecast(1)
         sign = '沒突破訊號'
         if forecast == 1:
             sign = '破底翻'
@@ -67,6 +68,13 @@ class aisle():
                 elif self.close in range(data['forecast_low'], data['forecast_low']+10):
                     self.trade(1, 1)  # 買進多單
                     self.has_order = True
+                elif power_k != None:
+                    if self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
+                        self.trade(1, -1)  # 買進空單
+                        self.has_order = True
+                    elif self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
+                        self.trade(1, 1)  # 買進多單
+                        self.has_order = True
                 else:
                     print('條件不符合繼續等')
             elif data['trend'] == 1:  # 只有在低點買多
@@ -75,18 +83,20 @@ class aisle():
                 if self.close in range(data['forecast_low'], data['forecast_low']+10):
                     self.trade(1, 1)  # 買進多單
                     self.has_order = True
-                elif self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
-                    self.trade(1, 1)  # 買進多單
-                    self.has_order = True
+                elif power_k != None:
+                    if self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
+                        self.trade(1, 1)  # 買進多單
+                        self.has_order = True
             elif data['trend'] == 2:  # 只有在高點放空
                 print('下降趨勢')
                 # 上線段放空
                 if self.close in range(data['forecast_high'], data['forecast_high']+10):
                     self.trade(1, -1)  # 買進空單
                     self.has_order = True
-                elif self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
-                    self.trade(1, -1)  # 買進空單
-                    self.has_order = True
+                elif power_k != None:
+                    if self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
+                        self.trade(1, -1)  # 買進空單
+                        self.has_order = True
         else:  # 目前有單
             self.has_order = self.check_trend_loss(data, minute, power_k)
         
@@ -429,12 +439,13 @@ class aisle():
                                 self.trade(-1, -1)  # 多單停利
                                 return False
                             # 能量k棒計算出來的高點
-                            elif self.close >= power_k['hh'] or self.close in range(power_k['h'], power_k['hh']):
-                                self.balance = (
-                                    (self.close - df_trade['price'])*50)-70  # 計算賺賠
-                                print('多單停利-能量k棒範圍')
-                                self.trade(-1, -1)  # 多單停利
-                                return False
+                            elif power_k != None:
+                                if self.close >= power_k['hh'] or self.close in range(power_k['h'], power_k['hh']):
+                                    self.balance = (
+                                        (self.close - df_trade['price'])*50)-70  # 計算賺賠
+                                    print('多單停利-能量k棒範圍')
+                                    self.trade(-1, -1)  # 多單停利
+                                    return False
 
                     elif df_trade['lot'] == -1:  # 空單的處理
                         if (self.close >= (df_trade['price'] + self.loss)):
@@ -454,12 +465,13 @@ class aisle():
                                 self.trade(-1, 1)  # 空單停利
                                 return False
                             # 能量k棒計算出來的低點
-                            elif self.close <= power_k['ll'] or self.close in range(power_k['l'], power_k['ll']):
-                                self.balance = (
-                                    (df_trade['price'] - self.close)*50)-70  # 計算賺賠
-                                print('空單停利-能量k棒')
-                                self.trade(-1, 1)  # 空單停利
-                                return False
+                            elif power_k != None:
+                                if self.close <= power_k['ll'] or self.close in range(power_k['l'], power_k['ll']):
+                                    self.balance = (
+                                        (df_trade['price'] - self.close)*50)-70  # 計算賺賠
+                                    print('空單停利-能量k棒')
+                                    self.trade(-1, 1)  # 空單停利
+                                    return False
 
     def lineMsgFormat(self,datetime,type,price,lot,total_lot,balance,total_balance):
         '''
