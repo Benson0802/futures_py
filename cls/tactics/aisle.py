@@ -124,8 +124,11 @@ class aisle():
             self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
             df = self.df_1day.iloc[-2]
 
+        if df['volume'] < 1000 : return     
+
         volume = float(str(df['volume'])[0] + '.' + str(df['volume'])[1:]) if int(
             str(df['volume'])[0]) < 6 else float('0.' + str(df['volume']))
+        
         power = math.ceil((df['high'] - df['low']) * volume)
         hh = math.ceil(df['high'] + power)
         h = math.ceil(df['close'] + power)
