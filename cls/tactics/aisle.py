@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 import globals
 import threading
 from matplotlib.animation import FuncAnimation
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Conv1D, MaxPooling1D, Flatten
+import os.path
 
 class aisle():
     '''
@@ -85,6 +89,13 @@ class aisle():
         else:  # 目前有單
             self.has_order = self.check_trend_loss(data, minute, power_k)
 
+        # 預測下個60k
+        forecast = self.forecast(minute)
+        with open('data/forecast.csv', 'a', encoding='utf-8', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([trend_line.iloc[-1]['datetime'],forecast])
+        print('預測下個時間點:'+str(forecast))
+        
         if globals.has_thread == False:
             thread = threading.Thread(
                 target=self.draw_trend, args=(minute, trend_line))
@@ -127,6 +138,72 @@ class aisle():
         # return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
         return {"power:": power, "hh": hh, "h": h, 'l': l, 'll': ll, 'op_h': op_h, 'op_l': op_l}
 
+    def forecast(self,minute):
+        df = None
+        if minute == 1:
+            df = pd.read_csv('data/1Min.csv')
+        elif minute == 5:
+            df = pd.read_csv('data/5Min.csv')
+        elif minute == 15:
+            df = pd.read_csv('data/15Min.csv')
+        elif minute == 30:
+            df = pd.read_csv('data/30Min.csv')
+        elif minute == 60:
+            df = pd.read_csv('data/60Min.csv')
+        elif minute == 1440:
+            df = pd.read_csv('data/1Day.csv')
+        # 將日期欄位轉換為datetime型態
+        df['datetime'] = pd.to_datetime(df['datetime'])
+
+        # 將datetime欄位設為index
+        df = df.set_index('datetime')
+        # 訓練集和測試集的比例
+        train_size = 0.8
+
+        # 將資料集分割為訓練集和測試集
+        train_df = df[:int(len(df)*train_size)]
+        test_df = df[int(len(df)*train_size):]
+
+        # 轉換資料集格式
+        def create_dataset(X, y, time_steps=1):
+            Xs, ys = [], []
+            for i in range(len(X) - time_steps):
+                v = X.iloc[i:(i + time_steps)].values
+                Xs.append(v)
+                ys.append(y.iloc[i + time_steps])
+            return np.array(Xs), np.array(ys)
+
+        # 設定時間步長
+        TIME_STEPS = 3
+
+        # 將訓練集和測試集轉換為X和y格式
+        X_train, y_train = create_dataset(train_df, train_df['close'], TIME_STEPS)
+        X_test, y_test = create_dataset(test_df, test_df['close'], TIME_STEPS)
+
+        # 使用MinMaxScaler進行標準化
+        scaler = MinMaxScaler()
+        X_train = scaler.fit_transform(X_train.reshape(-1, 1)).reshape(X_train.shape)
+        X_test = scaler.transform(X_test.reshape(-1, 1)).reshape(X_test.shape)
+
+        # 建立模型
+        model = Sequential()
+        model.add(Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(TIME_STEPS, X_train.shape[2])))
+        model.add(MaxPooling1D(pool_size=2))
+        model.add(Flatten())
+        model.add(Dense(50, activation='relu'))
+        model.add(Dense(1))
+        model.compile(optimizer='adam', loss='mse')
+
+        # 訓練模型
+        model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=1)
+
+        # 使用訓練好的模型進行預測
+        last_data = df.iloc[-TIME_STEPS:]
+        last_data_scaled = scaler.transform(last_data.values.reshape(-1, 1)).reshape(1, TIME_STEPS, last_data.shape[1])
+        result = math.ceil(model.predict(last_data_scaled)[0][0])
+        return result
+        
+        
     def get_trend_data(self, minute):
         '''
         取得目前趨勢資料
@@ -174,7 +251,7 @@ class aisle():
                              pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high[1] + reg_high[0]
                               * pd.Series(df_n.index)).round().astype(int)
-
+        
         # 黃金分割率
         # fib = self.fibonacci(minute)
         # print(fib)
