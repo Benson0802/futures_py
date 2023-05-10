@@ -1,5 +1,4 @@
 import pandas as pd
-import math
 import csv
 from datetime import datetime
 import cls.notify as lineMeg
@@ -11,8 +10,7 @@ import matplotlib.pyplot as plt
 import globals
 import threading
 from matplotlib.animation import FuncAnimation
-from keras.models import Sequential
-from keras.layers import Conv1D, MaxPooling1D, LSTM, Dropout, Dense
+import cls.trun_adam as adam
 
 class aisle():
     def __init__(self, close):
@@ -78,7 +76,7 @@ class aisle():
                 target=self.draw_trend, args=(minute, trend_line))
             thread.start()
             globals.has_thread = True
-
+    
     def get_trend_data(self, minute):
         '''
         取得目前趨勢資料
@@ -138,7 +136,7 @@ class aisle():
 
     def has_breakout(self):
         '''
-        檢測支壓，當前一根k低於支撐或壓力位且最後一根開盤價和收盤價低於該水平時返回true
+        判斷是否突破或跌破
         '''
         self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
         previous = self.df_1Min.iloc[-2]
@@ -314,6 +312,12 @@ class aisle():
         '''
         if self.df_trade.empty is False:
             df_trade = self.df_trade.iloc[-1]
+            #取得翻亞當目標價
+            df_60Min = self.df_60Min.tail(globals.how).reset_index(drop=False)
+            series = np.array(df_60Min['close'])
+            exits = adam.flip_adam_exit(series)
+            target = int(exits)
+            print('亞當目標價:'+str(target))
             if len(df_trade) > 0:
                 if df_trade['type'] == 1:  # 有單時
                     if df_trade['lot'] == 1:  # 有多單的處理
@@ -329,6 +333,12 @@ class aisle():
                         if data['trend'] == 0 or data['trend'] == 1:  # 盤整或上升趨勢則上線段停利
                             # 上線段停利(容許值上下五點)
                             if self.close in range(data['forecast_high']-5, data['forecast_high']+5):
+                                self.balance = (
+                                    (self.close - df_trade['price'])*50)-70  # 計算賺賠
+                                print('多單停利-趨勢線上')
+                                self.trade(-1, -1)  # 多單停利
+                                return False
+                            elif self.close >= target:
                                 self.balance = (
                                     (self.close - df_trade['price'])*50)-70  # 計算賺賠
                                 print('多單停利-趨勢線上')
@@ -352,7 +362,13 @@ class aisle():
                                 print('空單停利-趨勢線')
                                 self.trade(-1, 1)  # 空單停利
                                 return False
-
+                            elif self.close <= target:
+                                self.balance = (
+                                    (df_trade['price'] - self.close)*50)-70  # 計算賺賠
+                                print('空單停利-趨勢線')
+                                self.trade(-1, 1)  # 空單停利
+                                return False
+                            
     def lineMsgFormat(self,datetime,type,price,lot,total_lot,balance,total_balance):
         '''
         串接line訊息
