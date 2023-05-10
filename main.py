@@ -35,6 +35,7 @@ api.quote.subscribe(
 def quote_callback(exchange:Exchange, tick:TickFOPv1):
     if tick.simtrade == True: return #避開試搓時間
     ck = convertK(tick,True)
+    
     #最後一盤資料寫入csv
     current_time = datetime.datetime.now().time().replace(second=0, microsecond=0)
     if current_time == datetime.time(hour=4, minute=59) or current_time == datetime.time(hour=13, minute=44):
@@ -47,15 +48,15 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
                 globals.volume += row['volume']
                         
             now = datetime.datetime.now()
-            tick_min  = now.strftime('%Y/%m/%d %H:%M')
+            last_min  = now.strftime('%Y/%m/%d %H:%M')
             ck = convertK(tick,True)
-            ck.write_1k_bar(tick_min,globals.volume,globals.amount)
+            ck.write_1k_bar(last_min,globals.volume,globals.amount)
             ck.convert_k_bar('5Min')
             ck.convert_k_bar('15Min')
             ck.convert_k_bar('30Min')
             ck.convert_k_bar('60Min')
             ck.convert_day_k_bar()
-        
+    
     globals.now_min = ck.get_now_min()
     globals.tick_min = ck.get_tick_min()
     
