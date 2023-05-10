@@ -39,10 +39,9 @@ class aisle():
         '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        power_k = None
-        power_k = self.power_kbar(30)  # 加入能量k棒的判斷
-
-        print(power_k)
+        # power_k = None
+        # power_k = self.power_kbar(30)  # 加入能量k棒的判斷
+        print(self.levels)
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
@@ -57,13 +56,13 @@ class aisle():
                 elif self.close in range(data['forecast_low'], data['forecast_low']+10):
                     self.trade(1, 1)  # 買進多單
                     self.has_order = True
-                elif power_k != None:
-                    if self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
-                        self.trade(1, -1)  # 買進空單
-                        self.has_order = True
-                    elif self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
-                        self.trade(1, 1)  # 買進多單
-                        self.has_order = True
+                # elif power_k != None:
+                #     if self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
+                #         self.trade(1, -1)  # 買進空單
+                #         self.has_order = True
+                #     elif self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
+                #         self.trade(1, 1)  # 買進多單
+                #         self.has_order = True
                 else:
                     print('條件不符合繼續等')
             elif data['trend'] == 1:  # 只有在低點買多
@@ -72,22 +71,22 @@ class aisle():
                 if self.close in range(data['forecast_low'], data['forecast_low']+10):
                     self.trade(1, 1)  # 買進多單
                     self.has_order = True
-                elif power_k != None:
-                    if self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
-                        self.trade(1, 1)  # 買進多單
-                        self.has_order = True
+                # elif power_k != None:
+                #     if self.close in range(power_k['ll']-5, power_k['ll']+5):  # 買進多單
+                #         self.trade(1, 1)  # 買進多單
+                #         self.has_order = True
             elif data['trend'] == 2:  # 只有在高點放空
                 print('下降趨勢')
                 # 上線段放空
                 if self.close in range(data['forecast_high'], data['forecast_high']+10):
                     self.trade(1, -1)  # 買進空單
                     self.has_order = True
-                elif power_k != None:
-                    if self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
-                        self.trade(1, -1)  # 買進空單
-                        self.has_order = True
+                # elif power_k != None:
+                #     if self.close in range(power_k['hh']-5, power_k['hh']+5):  # 買進空單
+                #         self.trade(1, -1)  # 買進空單
+                #         self.has_order = True
         else:  # 目前有單
-            self.has_order = self.check_trend_loss(data, minute, power_k)
+            self.has_order = self.check_trend_loss(data, minute)
         
         if globals.has_thread == False:
             thread = threading.Thread(
@@ -95,44 +94,44 @@ class aisle():
             thread.start()
             globals.has_thread = True
 
-    def power_kbar(self, minute):
-        '''
-        能量K棒計算
-        '''
-        df = None
-        if minute == 1:
-            self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
-            df = self.df_1Min.iloc[-2]
-        elif minute == 5:
-            self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
-            df = self.df_5Min.iloc[-2]
-        elif minute == 15:
-            self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
-            df = self.df_15Min.iloc[-2]
-        elif minute == 30:
-            self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
-            df = self.df_30Min.iloc[-2]
-        elif minute == 60:
-            self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
-            df = self.df_60Min.iloc[-2]
-        elif minute == 1440:
-            self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
-            df = self.df_1day.iloc[-2]
+    # def power_kbar(self, minute):
+    #     '''
+    #     能量K棒計算
+    #     '''
+    #     df = None
+    #     if minute == 1:
+    #         self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
+    #         df = self.df_1Min.iloc[-2]
+    #     elif minute == 5:
+    #         self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
+    #         df = self.df_5Min.iloc[-2]
+    #     elif minute == 15:
+    #         self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
+    #         df = self.df_15Min.iloc[-2]
+    #     elif minute == 30:
+    #         self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
+    #         df = self.df_30Min.iloc[-2]
+    #     elif minute == 60:
+    #         self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
+    #         df = self.df_60Min.iloc[-2]
+    #     elif minute == 1440:
+    #         self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
+    #         df = self.df_1day.iloc[-2]
 
-        if df['volume'] < 1000 : return     
+    #     if df['volume'] < 1000 : return     
 
-        volume = float(str(df['volume'])[0] + '.' + str(df['volume'])[1:]) if int(
-            str(df['volume'])[0]) < 6 else float('0.' + str(df['volume']))
+    #     volume = float(str(df['volume'])[0] + '.' + str(df['volume'])[1:]) if int(
+    #         str(df['volume'])[0]) < 6 else float('0.' + str(df['volume']))
         
-        power = math.ceil((df['high'] - df['low']) * volume)
-        hh = math.ceil(df['high'] + power)
-        h = math.ceil(df['close'] + power)
-        l = math.ceil(df['close'] - power)
-        ll = math.ceil(df['low'] - power)
-        op_h = math.ceil(df['low'] + power)
-        op_l = math.ceil(df['high'] - power)
-        # return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
-        return {"power:": power, "hh": hh, "h": h, 'l': l, 'll': ll, 'op_h': op_h, 'op_l': op_l}
+    #     power = math.ceil((df['high'] - df['low']) * volume)
+    #     hh = math.ceil(df['high'] + power)
+    #     h = math.ceil(df['close'] + power)
+    #     l = math.ceil(df['close'] - power)
+    #     ll = math.ceil(df['low'] - power)
+    #     op_h = math.ceil(df['low'] + power)
+    #     op_l = math.ceil(df['high'] - power)
+    #     # return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
+    #     return {"power:": power, "hh": hh, "h": h, 'l': l, 'll': ll, 'op_h': op_h, 'op_l': op_l}
 
     # def forecast(self,minute):
     #     df = None
@@ -252,6 +251,7 @@ class aisle():
         #取得支撐壓力(方法1)
         #self.levels = self.detect_level_method_1(df)
         self.levels = self.detect_level_method_2(df)
+        
         for _, level in self.levels:
             df_n["level"+str(level)] = level
         
@@ -279,6 +279,72 @@ class aisle():
         # df_n['op_h'] = power_k['op_h']
         # df_n['op_l'] = power_k['op_l']
         return df_n
+
+    def get_last_high_low(self, minute):
+        '''
+        取得高低差
+        '''
+        high = 0
+        low = 0
+        df = None
+        if minute == 1:
+            self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
+            df = self.df_1Min.tail(globals.how).reset_index(drop=False)
+        elif minute == 5:
+            self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
+            df = self.df_5Min.tail(globals.how).reset_index(drop=False)
+        elif minute == 15:
+            self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
+            df = self.df_15Min.tail(globals.how).reset_index(drop=False)
+        elif minute == 30:
+            self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
+            df = self.df_30Min.tail(globals.how).reset_index(drop=False)
+        elif minute == 60:
+            self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
+            df = self.df_60Min.tail(globals.how).reset_index(drop=False)
+        elif minute == 1440:
+            self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
+            df = self.df_1day.tail(globals.how).reset_index(drop=False)
+            
+        high, low = -1, float('inf')
+        last_high, last_low = -1, float('inf')
+        for i in range(len(df)):
+            if df['high'][i] > high:
+                high = df['high'][i]
+            if df['low'][i] < low:
+                low = df['low'][i]
+            if high - low > last_high - last_low:
+                last_high, last_low = high, low
+            if df['close'][i] > last_high or df['close'][i] < last_low:
+                high = last_high
+                low = last_low
+                
+        high = last_high
+        low = last_low
+        diff =  high - low
+        
+        return {"low": low, "high": high, 'diff':diff}
+
+    # def fibonacci(self,minute):
+    #     '''
+    #     用前一日開盤價帶入費波南希列數取得各級滿足點(出場用，不能當進場依據)
+    #     '''
+    #     df = self.get_last_high_low(minute)
+        
+    #     data = {
+    #         'h_809':math.ceil(df['diff'] * 0.809 + df['low']),
+    #         'h_618':math.ceil(df['diff'] * 0.618 + df['low']),
+    #         'h_500':math.ceil(df['diff'] * 0.5 + df['low']),
+    #         'h_382':math.ceil(df['diff'] * 0.382 + df['low']),
+    #         'h_191':math.ceil(df['diff'] * 0.191 + df['low']),
+    #         'l_191':math.ceil(df['low'] - df['diff'] * 0.191),
+    #         'l_382':math.ceil(df['low'] - df['diff'] * 0.382),
+    #         'l_500':math.ceil(df['low'] - df['diff'] * 0.5),
+    #         'l_618':math.ceil(df['low'] - df['diff'] * 0.618),
+    #         'l_809':math.ceil(df['low'] - df['diff'] * 0.809),
+    #     }
+        
+    #     return data
 
     def has_breakout(levels, previous, last):
         '''
@@ -481,7 +547,7 @@ class aisle():
                 now, type, self.close, lot, total_lot, self.balance, self.total_balance)
             lineMeg.sendMessage(msg)
 
-    def check_trend_loss(self, data, minute, power_k):
+    def check_trend_loss(self, data, minute):
         '''
         依趨勢線出場或停損
         '''
@@ -510,14 +576,14 @@ class aisle():
                                 print('多單停利-趨勢線上')
                                 self.trade(-1, -1)  # 多單停利
                                 return False
-                            # 能量k棒計算出來的高點
-                            elif power_k != None:
-                                if self.close >= power_k['hh'] or self.close in range(power_k['h'], power_k['hh']):
-                                    self.balance = (
-                                        (self.close - df_trade['price'])*50)-70  # 計算賺賠
-                                    print('多單停利-能量k棒範圍')
-                                    self.trade(-1, -1)  # 多單停利
-                                    return False
+                            # # 能量k棒計算出來的高點
+                            # elif power_k != None:
+                            #     if self.close >= power_k['hh'] or self.close in range(power_k['h'], power_k['hh']):
+                            #         self.balance = (
+                            #             (self.close - df_trade['price'])*50)-70  # 計算賺賠
+                            #         print('多單停利-能量k棒範圍')
+                            #         self.trade(-1, -1)  # 多單停利
+                            #         return False
 
                     elif df_trade['lot'] == -1:  # 空單的處理
                         if (self.close >= (df_trade['price'] + self.loss)):
@@ -536,14 +602,14 @@ class aisle():
                                 print('空單停利-趨勢線')
                                 self.trade(-1, 1)  # 空單停利
                                 return False
-                            # 能量k棒計算出來的低點
-                            elif power_k != None:
-                                if self.close <= power_k['ll'] or self.close in range(power_k['l'], power_k['ll']):
-                                    self.balance = (
-                                        (df_trade['price'] - self.close)*50)-70  # 計算賺賠
-                                    print('空單停利-能量k棒')
-                                    self.trade(-1, 1)  # 空單停利
-                                    return False
+                            # # 能量k棒計算出來的低點
+                            # elif power_k != None:
+                            #     if self.close <= power_k['ll'] or self.close in range(power_k['l'], power_k['ll']):
+                            #         self.balance = (
+                            #             (df_trade['price'] - self.close)*50)-70  # 計算賺賠
+                            #         print('空單停利-能量k棒')
+                            #         self.trade(-1, 1)  # 空單停利
+                            #         return False
 
     def lineMsgFormat(self,datetime,type,price,lot,total_lot,balance,total_balance):
         '''
