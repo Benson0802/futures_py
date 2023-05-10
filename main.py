@@ -4,7 +4,6 @@ import threading
 from cls.check_opening import check_opening
 import json
 from cls.convertK import convertK
-# from cls.order import order
 from cls.tactics.aisle import aisle
 import datetime
 import globals

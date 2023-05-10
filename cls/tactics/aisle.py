@@ -15,10 +15,6 @@ from keras.models import Sequential
 from keras.layers import Conv1D, MaxPooling1D, LSTM, Dropout, Dense
 
 class aisle():
-    '''
-    建立在一口單的進出
-    '''
-
     def __init__(self, close):
         self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
         self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
@@ -35,7 +31,8 @@ class aisle():
         self.loss = 20  # 損失幾點出場
         self.balance = 0  # 賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum()  # 總賺賠
-
+        self.levels = None
+        
     def run(self, minute):
         '''
         上升通道及下降通道策略
@@ -44,15 +41,7 @@ class aisle():
         data = self.get_trend_line(trend_line)
         power_k = None
         power_k = self.power_kbar(30)  # 加入能量k棒的判斷
-        # 學習破底翻及假突破的辨識
-        forecast = self.forecast(1)
-        sign = '沒突破訊號'
-        if forecast == 1:
-            sign = '破底翻'
-        elif forecast == 2:
-            sign = '假突破'
-            
-        print(sign)
+
         print(power_k)
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
@@ -100,10 +89,6 @@ class aisle():
         else:  # 目前有單
             self.has_order = self.check_trend_loss(data, minute, power_k)
         
-        with open('data/forecast.csv', 'a', encoding='utf-8', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([datetime.now().strftime('%Y/%m/%d %H:%M'),sign])
-        
         if globals.has_thread == False:
             thread = threading.Thread(
                 target=self.draw_trend, args=(minute, trend_line))
@@ -149,71 +134,71 @@ class aisle():
         # return {"量能:":power ,"頂:": hh, "高": h, '低':l,'底':ll ,'反轉高點': op_h,'反轉低點':op_l}
         return {"power:": power, "hh": hh, "h": h, 'l': l, 'll': ll, 'op_h': op_h, 'op_l': op_l}
 
-    def forecast(self,minute):
-        df = None
-        if minute == 1:
-            df = pd.read_csv('data/1Min.csv')
-        elif minute == 5:
-            df = pd.read_csv('data/5Min.csv')
-        elif minute == 15:
-            df = pd.read_csv('data/15Min.csv')
-        elif minute == 30:
-            df = pd.read_csv('data/30Min.csv')
-        elif minute == 60:
-            df = pd.read_csv('data/60Min.csv')
-        elif minute == 1440:
-            df = pd.read_csv('data/1Day.csv')
+    # def forecast(self,minute):
+    #     df = None
+    #     if minute == 1:
+    #         df = pd.read_csv('data/1Min.csv')
+    #     elif minute == 5:
+    #         df = pd.read_csv('data/5Min.csv')
+    #     elif minute == 15:
+    #         df = pd.read_csv('data/15Min.csv')
+    #     elif minute == 30:
+    #         df = pd.read_csv('data/30Min.csv')
+    #     elif minute == 60:
+    #         df = pd.read_csv('data/60Min.csv')
+    #     elif minute == 1440:
+    #         df = pd.read_csv('data/1Day.csv')
             
-        data = df.values
+    #     data = df.values
 
-        x = data[:, 1:6]
-        y = np.zeros(data.shape[0])
-        # 定義破底翻、假突破
-        for i in range(2, data.shape[0]):
-            if data[i, 4] > min(data[i-1, 3], data[i-2, 3]) and data[i-1, 4] < data[i-1, 1] and data[i-2, 4] < data[i-2, 1]:
-                y[i] = 1 # 破底翻
-            elif data[i, 4] < max(data[i-1, 2], data[i-2, 2]) and data[i-1, 4] > data[i-1, 1] and data[i-2, 4] > data[i-2, 1]:
-                y[i] = -1 # 假突破
+    #     x = data[:, 1:6]
+    #     y = np.zeros(data.shape[0])
+    #     # 定義破底翻、假突破
+    #     for i in range(2, data.shape[0]):
+    #         if data[i, 4] > min(data[i-1, 3], data[i-2, 3]) and data[i-1, 4] < data[i-1, 1] and data[i-2, 4] < data[i-2, 1]:
+    #             y[i] = 1 # 破底翻
+    #         elif data[i, 4] < max(data[i-1, 2], data[i-2, 2]) and data[i-1, 4] > data[i-1, 1] and data[i-2, 4] > data[i-2, 1]:
+    #             y[i] = -1 # 假突破
                 
-        # 資料重塑
-        timesteps = 2 # 定義每個樣本的時間步數
-        features = x.shape[1] # 每個時間步數包含的特徵
-        samples = x.shape[0] - timesteps + 1 # 樣本數
-        x_reshape = np.zeros((samples, timesteps, features)) # 重塑後的輸入特徵
-        y_reshape = np.zeros(samples) # 重塑的標籤
-        for i in range(samples):
-            x_reshape[i] = x[i:i+timesteps]
-            y_reshape[i] = y[i+timesteps-1]
+    #     # 資料重塑
+    #     timesteps = 2 # 定義每個樣本的時間步數
+    #     features = x.shape[1] # 每個時間步數包含的特徵
+    #     samples = x.shape[0] - timesteps + 1 # 樣本數
+    #     x_reshape = np.zeros((samples, timesteps, features)) # 重塑後的輸入特徵
+    #     y_reshape = np.zeros(samples) # 重塑的標籤
+    #     for i in range(samples):
+    #         x_reshape[i] = x[i:i+timesteps]
+    #         y_reshape[i] = y[i+timesteps-1]
         
-        # 訓練
-        split_ratio = 0.8
-        split_index = int(samples * split_ratio)
-        x_train = x_reshape[:split_index]
+    #     # 訓練
+    #     split_ratio = 0.8
+    #     split_index = int(samples * split_ratio)
+    #     x_train = x_reshape[:split_index]
 
-        y_train = y_reshape[:split_index]
-        x_test = x_reshape[split_index:]
-        y_test = y_reshape[split_index:]
+    #     y_train = y_reshape[:split_index]
+    #     x_test = x_reshape[split_index:]
+    #     y_test = y_reshape[split_index:]
         
-        model = Sequential()
-        model.add(Conv1D(filters=32, kernel_size=1, strides=1, activation="relu", input_shape=(timesteps, features)))
-        model.add(MaxPooling1D(pool_size=2))
-        model.add(LSTM(units=64, return_sequences=False))
-        model.add(Dropout(rate=0.2))
-        model.add(Dense(units=1, activation="tanh"))
-        model.compile(optimizer="adam", loss="mse", metrics=["accuracy"])
-        model.fit(x_train, y_train, batch_size=32, epochs=10, validation_data=(x_test, y_test))
-        model.evaluate(x_test, y_test)
+    #     model = Sequential()
+    #     model.add(Conv1D(filters=32, kernel_size=1, strides=1, activation="relu", input_shape=(timesteps, features)))
+    #     model.add(MaxPooling1D(pool_size=2))
+    #     model.add(LSTM(units=64, return_sequences=False))
+    #     model.add(Dropout(rate=0.2))
+    #     model.add(Dense(units=1, activation="tanh"))
+    #     model.compile(optimizer="adam", loss="mse", metrics=["accuracy"])
+    #     model.fit(x_train, y_train, batch_size=32, epochs=10, validation_data=(x_test, y_test))
+    #     model.evaluate(x_test, y_test)
         
-        last = df.tail(2).reset_index(drop=True)
-        x_new = np.array([last[['open', 'high', 'low', 'close', 'volume']].values])
-        y_pred = model.predict(x_new)
-        result = 0 #0沒有訊號  1破底翻  2假突破
-        if y_pred > 0.5:
-            result = 1
-        elif y_pred < -0.5:
-            result = 2
+    #     last = df.tail(2).reset_index(drop=True)
+    #     x_new = np.array([last[['open', 'high', 'low', 'close', 'volume']].values])
+    #     y_pred = model.predict(x_new)
+    #     result = 0 #0沒有訊號  1破底翻  2假突破
+    #     if y_pred > 0.5:
+    #         result = 1
+    #     elif y_pred < -0.5:
+    #         result = 2
 
-        return result
+    #     return result
         
         
     def get_trend_data(self, minute):
@@ -264,6 +249,12 @@ class aisle():
         df_n["high_trend"] = (reg_high[1] + reg_high[0]
                               * pd.Series(df_n.index)).round().astype(int)
         
+        #取得支撐壓力(方法1)
+        #self.levels = self.detect_level_method_1(df)
+        self.levels = self.detect_level_method_2(df)
+        for _, level in self.levels:
+            df_n["level"+str(level)] = level
+        
         # 黃金分割率
         # fib = self.fibonacci(minute)
         # print(fib)
@@ -287,8 +278,85 @@ class aisle():
         # df_n['ll'] = power_k['ll']
         # df_n['op_h'] = power_k['op_h']
         # df_n['op_l'] = power_k['op_l']
-
         return df_n
+
+    def has_breakout(levels, previous, last):
+        '''
+        檢測支壓，當前一根k低於支撐或壓力位且最後一根開盤價和收盤價低於該水平時返回true
+        '''
+        for _, level in levels:
+            cond1 = (previous['open'] < level) 
+            cond2 = (last['open'] > level) and (last['low'] > level)
+        return (cond1 and cond2)
+
+    def detect_level_method_1(self,df):
+        '''
+        取得支撐壓力(方法1)
+        '''
+        levels = []
+        for i in range(2,df.shape[0]-2):
+            if self.is_support(df,i):
+                l = df['low'][i]
+                if self.is_far_from_level(l, levels, df):
+                    levels.append((i,l))
+            elif self.is_resistance(df,i):
+                l = df['high'][i]
+                if self.is_far_from_level(l, levels, df):
+                    levels.append((i,l))
+                
+        return levels
+
+    def detect_level_method_2(self,df):
+        '''
+        取得支撐壓力的方法2
+        '''
+        levels = []
+        max_list = []
+        min_list = []
+        for i in range(5, len(df)-5):
+            high_range = df['high'][i-5:i+4]
+            current_max = high_range.max()
+            if current_max not in max_list:
+                max_list = []
+            max_list.append(current_max)
+            if len(max_list) == 5 and self.is_far_from_level(current_max, levels, df):
+                levels.append((high_range.idxmax(), current_max))
+            
+            low_range = df['low'][i-5:i+5]
+            current_min = low_range.min()
+            if current_min not in min_list:
+                min_list = []
+            min_list.append(current_min)
+            if len(min_list) == 5 and self.is_far_from_level(current_min, levels, df):
+                levels.append((low_range.idxmin(), current_min))
+        return levels
+
+    def is_support(self,df,i):
+        '''
+        取得支撐
+        '''
+        cond1 = df['low'][i] < df['low'][i-1]   
+        cond2 = df['low'][i] < df['low'][i+1]   
+        cond3 = df['low'][i+1] < df['low'][i+2]   
+        cond4 = df['low'][i-1] < df['low'][i-2]  
+        return (cond1 and cond2 and cond3 and cond4) 
+
+    def is_resistance(self,df,i): 
+        '''
+        取得壓力
+        ''' 
+        cond1 = df['high'][i] > df['high'][i-1]   
+        cond2 = df['high'][i] > df['high'][i+1]   
+        cond3 = df['high'][i+1] > df['high'][i+2]   
+        cond4 = df['high'][i-1] > df['high'][i-2]  
+        return (cond1 and cond2 and cond3 and cond4)
+
+    def is_far_from_level(self , value, levels, df):
+        '''
+        判斷新的支壓存不存在
+        '''
+        ave =  np.mean(df['high'] - df['low'])    
+        return np.sum([abs(value-level)<ave for _,level in levels])==0
 
     def get_trend_line(self, df_n):
         '''
@@ -331,6 +399,8 @@ class aisle():
             df_n = self.get_trend_data(minute)
             ax[0].clear()
             ax[1].clear()
+            for _, level in self.levels:
+                ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
@@ -357,6 +427,8 @@ class aisle():
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
+        for _, level in self.levels:
+                ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
         # ax[0].plot(df_n['hh'])
         # ax[0].plot(df_n['h'])
         # ax[0].plot(df_n['l'])
