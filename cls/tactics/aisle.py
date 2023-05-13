@@ -10,9 +10,14 @@ import matplotlib.pyplot as plt
 import globals
 import threading
 from matplotlib.animation import FuncAnimation
-import cls.trun_adam as adam
+import cls.tools.trun_adam as adam
+import cls.tools.trailing_stop as stop
+import cls.tools.get_sup_pre as suppre
 
 class aisle():
+    '''
+    上通道及下通道+支撐壓力策略
+    '''
     def __init__(self, close):
         self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
         self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
@@ -29,17 +34,13 @@ class aisle():
         self.loss = 20  # 損失幾點出場
         self.balance = 0  # 賺or賠 計算方式 => ((賣出部位-收盤部位)*50)-70手續費
         self.total_balance = self.df_trade['balance'].sum()  # 總賺賠
-        self.levels = None
         
     def run(self, minute):
-        '''
-        上升通道及下降通道策略
-        '''
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        is_breakout = self.has_breakout()
-        print(self.levels)
-        print(is_breakout)
+        is_breakout = suppre.has_breakout()
+        print('支撐壓力 {}'.format(globals.levels))
+        print('是否突破:'+str(is_breakout))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
@@ -51,7 +52,7 @@ class aisle():
                     self.trade(1, -1)  # 買進空單
                     self.has_order = True
                 # 下線段買多
-                elif self.close in range(data['forecast_low'], data['forecast_low']+10):
+                elif self.close in range(data['forecast_low'], data['forecast_low']-10):
                     self.trade(1, 1)  # 買進多單
                     self.has_order = True
                 else:
@@ -59,7 +60,7 @@ class aisle():
             elif data['trend'] == 1:  # 只有在低點買多
                 print('上升趨勢')
                 # 下線段買多
-                if self.close in range(data['forecast_low'], data['forecast_low']+10):
+                if self.close in range(data['forecast_low'], data['forecast_low']-10):
                     self.trade(1, 1)  # 買進多單
                     self.has_order = True
             elif data['trend'] == 2:  # 只有在高點放空
@@ -126,94 +127,12 @@ class aisle():
                               * pd.Series(df_n.index)).round().astype(int)
         
         #取得支撐壓力(方法1)
-        #self.levels = self.detect_level_method_1(df)
-        self.levels = self.detect_level_method_2(df)
-        
-        for _, level in self.levels:
+        #globals.levels = suppre.detect_level_method_1(df)
+        globals.levels = suppre.detect_level_method_2(df)
+        for level in globals.levels:
             df_n["level"+str(level)] = level
-        
-        return df_n
-
-    def has_breakout(self):
-        '''
-        判斷是否突破或跌破
-        '''
-        self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
-        previous = self.df_1Min.iloc[-2]
-        last = self.df_1Min.iloc[-1]
-        for _, level in self.levels:
-            cond1 = (previous['open'] < level) 
-            cond2 = (last['open'] > level) and (last['low'] > level)
-        return (cond1 and cond2)
-
-    def detect_level_method_1(self,df):
-        '''
-        取得支撐壓力(方法1)
-        '''
-        levels = []
-        for i in range(2,df.shape[0]-2):
-            if self.is_support(df,i):
-                l = df['low'][i]
-                if self.is_far_from_level(l, levels, df):
-                    levels.append((i,l))
-            elif self.is_resistance(df,i):
-                l = df['high'][i]
-                if self.is_far_from_level(l, levels, df):
-                    levels.append((i,l))
-                
-        return levels
-
-    def detect_level_method_2(self,df):
-        '''
-        取得支撐壓力的方法2
-        '''
-        levels = []
-        max_list = []
-        min_list = []
-        for i in range(5, len(df)-5):
-            high_range = df['high'][i-5:i+4]
-            current_max = high_range.max()
-            if current_max not in max_list:
-                max_list = []
-            max_list.append(current_max)
-            if len(max_list) == 5 and self.is_far_from_level(current_max, levels, df):
-                levels.append((high_range.idxmax(), current_max))
             
-            low_range = df['low'][i-5:i+5]
-            current_min = low_range.min()
-            if current_min not in min_list:
-                min_list = []
-            min_list.append(current_min)
-            if len(min_list) == 5 and self.is_far_from_level(current_min, levels, df):
-                levels.append((low_range.idxmin(), current_min))
-        return levels
-
-    def is_support(self,df,i):
-        '''
-        取得支撐
-        '''
-        cond1 = df['low'][i] < df['low'][i-1]   
-        cond2 = df['low'][i] < df['low'][i+1]   
-        cond3 = df['low'][i+1] < df['low'][i+2]   
-        cond4 = df['low'][i-1] < df['low'][i-2]  
-        return (cond1 and cond2 and cond3 and cond4) 
-
-    def is_resistance(self,df,i): 
-        '''
-        取得壓力
-        ''' 
-        cond1 = df['high'][i] > df['high'][i-1]   
-        cond2 = df['high'][i] > df['high'][i+1]   
-        cond3 = df['high'][i+1] > df['high'][i+2]   
-        cond4 = df['high'][i-1] > df['high'][i-2]  
-        return (cond1 and cond2 and cond3 and cond4)
-
-    def is_far_from_level(self , value, levels, df):
-        '''
-        判斷新的支壓存不存在
-        '''
-        ave =  np.mean(df['high'] - df['low'])    
-        return np.sum([abs(value-level)<ave for _,level in levels])==0
+        return df_n
 
     def get_trend_line(self, df_n):
         '''
@@ -256,7 +175,7 @@ class aisle():
             df_n = self.get_trend_data(minute)
             ax[0].clear()
             ax[1].clear()
-            for _, level in self.levels:
+            for level in globals.levels:
                 ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
@@ -268,8 +187,8 @@ class aisle():
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
-        for _, level in self.levels:
-                ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
+        for level in globals.levels:
+            ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
@@ -314,6 +233,7 @@ class aisle():
             df_trade = self.df_trade.iloc[-1]
             #取得翻亞當目標價
             df_60Min = self.df_60Min.tail(globals.how).reset_index(drop=False)
+            last = df_60Min.iloc[-2]
             series = np.array(df_60Min['close'])
             exits = adam.flip_adam_exit(series)
             target = int(exits)
@@ -338,7 +258,7 @@ class aisle():
                                 print('多單停利-趨勢線上')
                                 self.trade(-1, -1)  # 多單停利
                                 return False
-                            elif self.close >= target:
+                            elif self.close >= target and last['volume'] > 15000:
                                 self.balance = (
                                     (self.close - df_trade['price'])*50)-70  # 計算賺賠
                                 print('多單停利-趨勢線上')
@@ -362,7 +282,7 @@ class aisle():
                                 print('空單停利-趨勢線')
                                 self.trade(-1, 1)  # 空單停利
                                 return False
-                            elif self.close <= target:
+                            elif self.close <= target and last['volume'] > 15000:
                                 self.balance = (
                                     (df_trade['price'] - self.close)*50)-70  # 計算賺賠
                                 print('空單停利-趨勢線')

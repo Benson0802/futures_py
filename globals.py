@@ -8,6 +8,8 @@ def initialize():
     global code #台指期月份
     global is_backtest #是否回測
     global how #取幾根k棒
+    global levels #支撐壓力
+    
     has_thread = False
     now_min = None
     tick_min = None
@@ -17,3 +19,4 @@ def initialize():
     code = ''
     is_backtest = False
     how = 100
+    levels = None
