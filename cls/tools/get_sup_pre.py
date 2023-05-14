@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import globals
 
 def detect_level_method_2(df):
@@ -16,6 +15,11 @@ def detect_level_method_2(df):
             max_list = []
         max_list.append(current_max)
         if len(max_list) == 5 and is_far_from_level(current_max, levels, df):
+            if globals.aisle_type not in [0, 1, 2]:
+                globals.is_break = False #突破訊號復歸
+                globals.is_backtest = False #回測訊號復歸
+                globals.direction = 0 #方向復歸
+                globals.aisle_type = 0 #比較類型復歸
             levels.append((high_range.idxmax(), current_max))
             
         low_range = df['low'][i-5:i+5]
@@ -24,6 +28,11 @@ def detect_level_method_2(df):
             min_list = []
         min_list.append(current_min)
         if len(min_list) == 5 and is_far_from_level(current_min, levels, df):
+            if globals.aisle_type not in [0, 1, 2]:
+                globals.is_break = False #突破訊號復歸
+                globals.is_backtest = False #回測訊號復歸
+                globals.direction = 0 #方向復歸
+                globals.aisle_type = 0 #比較類型復歸
             levels.append((low_range.idxmin(), current_min))
             
     data = convert_arr_sort(levels)
@@ -38,10 +47,20 @@ def detect_level_method_1(df):
         if is_support(df,i):
             l = df['low'][i]
             if is_far_from_level(l, levels, df):
+                if globals.aisle_type not in [0, 1, 2]:
+                    globals.is_break = False #突破訊號復歸
+                    globals.is_backtest = False #回測訊號復歸
+                    globals.direction = 0 #方向復歸
+                    globals.aisle_type = 0 #比較類型復歸
                 levels.append((i,l))
         elif is_resistance(df,i):
             l = df['high'][i]
             if is_far_from_level(l, levels, df):
+                if globals.aisle_type not in [0, 1, 2]:
+                    globals.is_break = False #突破訊號復歸
+                    globals.is_backtest = False #回測訊號復歸
+                    globals.direction = 0 #方向復歸
+                    globals.aisle_type = 0 #比較類型復歸
                 levels.append((i,l))
         
     data = convert_arr_sort(levels)
@@ -79,15 +98,3 @@ def convert_arr_sort(data):
     selected_data = sorted_data[:5]  # 选择前5个元素
     result = [x[1] for x in selected_data]  # 提取第二个元素
     return result
-
-def has_breakout():
-    '''
-    判斷是否突破或跌破
-    '''
-    df = pd.read_csv('data/60Min.csv', index_col='datetime')
-    previous = df.iloc[-2]
-    last = df.iloc[-1]
-    for level in globals.levels:
-        cond1 = (previous['open'] < level) 
-        cond2 = (last['open'] > level) and (last['low'] > level)
-    return (cond1 and cond2)

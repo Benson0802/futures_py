@@ -11,8 +11,8 @@ import globals
 import threading
 from matplotlib.animation import FuncAnimation
 import cls.tools.trun_adam as adam
-import cls.tools.trailing_stop as stop
 import cls.tools.get_sup_pre as suppre
+import time
 
 class aisle():
     '''
@@ -38,38 +38,149 @@ class aisle():
     def run(self, minute):
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        is_breakout = suppre.has_breakout()
         print('支撐壓力 {}'.format(globals.levels))
-        print('是否突破:'+str(is_breakout))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
-        if self.has_order == False:  # 目前沒單
-            if data['trend'] == 0:  # 上空下多做價差
+        if self.has_order == False:# 目前沒單
+            if data['trend'] == 0:  # 盤整 上空下多做價差
                 print('盤整趨勢')
-                # 上線段放空
-                if self.close in range(data['forecast_high'], data['forecast_high']+10):
-                    self.trade(1, -1)  # 買進空單
-                    self.has_order = True
-                # 下線段買多
-                elif self.close in range(data['forecast_low'], data['forecast_low']-10):
-                    self.trade(1, 1)  # 買進多單
-                    self.has_order = True
-                else:
-                    print('條件不符合繼續等')
-            elif data['trend'] == 1:  # 只有在低點買多
+                if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
+                    if self.close > data['forecast_high']: #突破上通道等回測
+                        self.break_set(True,2,1)
+                    elif self.close > globals.levels[-1]: #突破最高壓力線等回測
+                        self.break_set(True,2,3)
+                    elif self.close > globals.levels[-2]: #突破次高壓力線等回測
+                        self.break_set(True,2,5)
+                    elif self.close < data['forecast_low']: #跌破下通道等回測
+                        self.break_set(True,1,2)
+                    elif self.close < globals.levels[0]: #跌破最低支撐線等回測
+                        self.break_set(True,1,4)
+                    elif self.close < globals.levels[1]: #跌破最次低支撐線等回測
+                        self.break_set(True,1,6)
+                    else:
+                        print('沒突破/跌破訊號~等待')
+                elif globals.is_break == True and globals.is_backtest == False: #已突破/跌破未回測
+                    if globals.direction == 2: #方向空 判斷是否回測
+                        if globals.aisle_type == 1 and self.close in range(data['forecast_high'] - 5, data['forecast_high'] + 5):#上通道的上下5點當已回測
+                            globals.is_backtest = True
+                        elif globals.aisle_type == 3 and self.close in range(globals.levels[-1] - 5, globals.levels[-1] + 5):#最高壓力線的上下5點當已回測
+                            globals.is_backtest = True
+                        elif globals.aisle_type == 5 and self.close in range(globals.levels[-2] - 5, globals.levels[-2] + 5):#次高壓力線的上下5點當已回測
+                            globals.is_backtest = True
+                        else:
+                            print('已突破高點未回測~等待')
+                    elif globals.direction == 1: #方向多 判斷是否回測
+                        if globals.aisle_type == 2 and self.close in range(data['forecast_low'] - 5, data['forecast_low'] + 5):#下通道的上下5點當已回測
+                            globals.is_backtest = True
+                        elif globals.aisle_type == 4 and self.close in range(globals.levels[0] - 5, globals.levels[0] + 5):#最低支撐線的上下5點當已回測
+                            globals.is_backtest = True
+                        elif globals.aisle_type == 6 and self.close in range(globals.levels[1] - 5, globals.levels[1] + 5):#次低支撐線的上下5點當已回測
+                            globals.is_backtest = True
+                        else:
+                            print('已跌破低點未回測~等待')
+                elif globals.is_break == True and globals.is_backtest == True: #已突破/跌破已回測
+                    if globals.direction == 2: #方向空 判斷是否假突破已跌回
+                        if globals.aisle_type == 1 and self.close < data['forecast_high']:
+                            self.trade(1, -1)  # 買進空單
+                            self.has_order = True #標記有單
+                            self.break_reset()
+                        elif globals.aisle_type == 3 and self.close < globals.levels[-1]:
+                            self.trade(1, -1)  # 買進空單
+                            self.has_order = True #標記有單
+                            self.break_reset()
+                        elif globals.aisle_type == 5 and self.close < globals.levels[-2]:
+                            self.trade(1, -1)  # 買進空單
+                            self.has_order = True #標記有單
+                            self.break_reset()
+                        else:
+                            print('已跌破+已回測但又站上去了~等待')
+                    elif globals.direction == 1: #方向多 判斷是否假跌破已站回
+                        if globals.aisle_type == 2 and self.close > data['forecast_low']:#判斷是否站回下通道線
+                            self.trade(1, 1)  # 買進多單
+                            self.has_order = True #標記有單
+                            self.break_reset()
+                        elif globals.aisle_type == 4 and self.close > globals.levels[0]:#判斷是否站回最低支撐
+                            self.trade(1, 1)  # 買進多單
+                            self.has_order = True #標記有單
+                            self.break_reset()
+                        elif globals.aisle_type == 6 and self.close > globals.levels[1]:#判斷是否站回次低支撐
+                            self.trade(1, 1)  # 買進多單
+                            self.has_order = True #標記有單
+                            self.break_reset()
+                        else:
+                            print('已突破+已回測但又跌回去了~等待')
+            elif data['trend'] == 1:  # 趨勢多 只有在低點買多
                 print('上升趨勢')
-                # 下線段買多
-                if self.close in range(data['forecast_low'], data['forecast_low']-10):
-                    self.trade(1, 1)  # 買進多單
-                    self.has_order = True
+                if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
+                    if self.close < data['forecast_low']: #跌破下通道等回測
+                        self.break_set(True,1,2)
+                    elif self.close < globals.levels[0]: #跌破最低支撐線等回測
+                        self.break_set(True,1,4)
+                    elif self.close < globals.levels[1]: #跌破最次低支撐線等回測
+                        self.break_set(True,1,6)
+                    else:
+                        print('沒突破/跌破訊號~等待')
+                elif globals.is_break == True and globals.is_backtest == False: #已突破/跌破未回測
+                    if globals.aisle_type == 2 and self.close in range(data['forecast_low'] - 5, data['forecast_low'] + 5):#下通道的上下5點當已回測
+                        globals.is_backtest = True
+                    elif globals.aisle_type == 4 and self.close in range(globals.levels[0] - 5, globals.levels[0] + 5):#最低支撐線的上下5點當已回測
+                        globals.is_backtest = True
+                    elif globals.aisle_type == 6 and self.close in range(globals.levels[1] - 5, globals.levels[1] + 5):#次低支撐線的上下5點當已回測
+                        globals.is_backtest = True
+                    else:
+                        print('已跌破低點未回測~等待')
+                elif globals.is_break == True and globals.is_backtest == True: #已突破/跌破已回測
+                    if globals.aisle_type == 2 and self.close > data['forecast_low']:#判斷是否站回下通道線
+                        self.trade(1, 1)  # 買進多單
+                        self.has_order = True #標記有單
+                        self.break_reset()
+                    elif globals.aisle_type == 4 and self.close > globals.levels[0]:#判斷是否站回最低支撐
+                        self.trade(1, 1)  # 買進多單
+                        self.has_order = True #標記有單
+                        self.break_reset()
+                    elif globals.aisle_type == 6 and self.close > globals.levels[1]:#判斷是否站回次低支撐
+                        self.trade(1, 1)  # 買進多單
+                        self.has_order = True #標記有單
+                        self.break_reset()
+                    else:
+                        print('已突破+已回測但又跌回去了~等待')
             elif data['trend'] == 2:  # 只有在高點放空
                 print('下降趨勢')
-                # 上線段放空
-                if self.close in range(data['forecast_high'], data['forecast_high']+10):
-                    self.trade(1, -1)  # 買進空單
-                    self.has_order = True
-        else:  # 目前有單
+                if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
+                    if self.close > data['forecast_high']: #突破上通道等回測
+                        self.break_set(True,2,1)
+                    elif self.close > globals.levels[-1]: #突破最高壓力線等回測
+                        self.break_set(True,2,3)
+                    elif self.close > globals.levels[-2]: #突破次高壓力線等回測
+                        self.break_set(True,2,5)
+                    else:
+                        print('沒突破/跌破訊號~等待')
+                elif globals.is_break == True and globals.is_backtest == False: #已突破/跌破未回測
+                    if globals.aisle_type == 1 and self.close in range(data['forecast_high'] - 5, data['forecast_high'] + 5):#上通道的上下5點當已回測
+                        globals.is_backtest = True
+                    elif globals.aisle_type == 3 and self.close in range(globals.levels[-1] - 5, globals.levels[-1] + 5):#最高壓力線的上下5點當已回測
+                        globals.is_backtest = True
+                    elif globals.aisle_type == 5 and self.close in range(globals.levels[-2] - 5, globals.levels[-2] + 5):#次高壓力線的上下5點當已回測
+                        globals.is_backtest = True
+                    else:
+                        print('已突破高點未回測~等待')
+                elif globals.is_break == True and globals.is_backtest == True: #已突破/跌破已回測
+                    if globals.aisle_type == 1 and self.close < data['forecast_high']:
+                        self.trade(1, -1)  # 買進空單
+                        self.has_order = True #標記有單
+                        self.break_reset()
+                    elif globals.aisle_type == 3 and self.close < globals.levels[-1]:
+                        self.trade(1, -1)  # 買進空單
+                        self.has_order = True #標記有單
+                        self.break_reset()
+                    elif globals.aisle_type == 5 and self.close < globals.levels[-2]:
+                        self.trade(1, -1)  # 買進空單
+                        self.has_order = True #標記有單
+                        self.break_reset()
+                    else:
+                        print('已跌破+已回測但又站上去了~等待')
+        else:  # 目前有單 
             self.has_order = self.check_trend_loss(data)
         
         if globals.has_thread == False:
@@ -77,6 +188,22 @@ class aisle():
                 target=self.draw_trend, args=(minute, trend_line))
             thread.start()
             globals.has_thread = True
+    
+    def break_set(self, is_break,direction,aisle_type):
+        '''
+        is_break 是否突破 是:true 否:false
+        direction 突破方向 1多 2空
+        aisle_type 判斷的類型  1上通道 2下通道 3 最高壓力  4最低支撐  5次高壓力 6次低支撐
+        '''
+        globals.is_break = is_break
+        globals.direction = direction
+        globals.aisle_type = aisle_type
+    
+    def break_reset(self):
+        globals.is_break = False #突破訊號復歸
+        globals.is_backtest = False #回測訊號復歸
+        globals.direction = 0 #方向復歸
+        globals.aisle_type = 0 #比較類型復歸
     
     def get_trend_data(self, minute):
         '''
@@ -127,8 +254,8 @@ class aisle():
                               * pd.Series(df_n.index)).round().astype(int)
         
         #取得支撐壓力(方法1)
-        #globals.levels = suppre.detect_level_method_1(df)
-        globals.levels = suppre.detect_level_method_2(df)
+        globals.levels = suppre.detect_level_method_1(df)
+        #globals.levels = suppre.detect_level_method_2(df)
         for level in globals.levels:
             df_n["level"+str(level)] = level
             
