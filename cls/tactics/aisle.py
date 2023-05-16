@@ -12,7 +12,8 @@ import threading
 from matplotlib.animation import FuncAnimation
 import cls.tools.trun_adam as adam
 import cls.tools.get_sup_pre as suppre
-import time
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
 
 class aisle():
     '''
@@ -42,6 +43,9 @@ class aisle():
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
+        print('is_break:'+str(globals.is_break))
+        print('is_backtest:'+str(globals.is_backtest))
+        print('aisle_type:'+str(globals.aisle_type))
         if self.has_order == False:# 目前沒單
             if data['trend'] == 0:  # 盤整 上空下多做價差
                 print('盤整趨勢')
@@ -254,8 +258,8 @@ class aisle():
                               * pd.Series(df_n.index)).round().astype(int)
         
         #取得支撐壓力(方法1)
-        globals.levels = suppre.detect_level_method_1(df)
-        #globals.levels = suppre.detect_level_method_2(df)
+        #globals.levels = suppre.detect_level_method_1(df)
+        globals.levels = suppre.detect_level_method_2(df)
         for level in globals.levels:
             df_n["level"+str(level)] = level
             

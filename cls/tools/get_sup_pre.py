@@ -47,20 +47,10 @@ def detect_level_method_1(df):
         if is_support(df,i):
             l = df['low'][i]
             if is_far_from_level(l, levels, df):
-                if globals.aisle_type not in [0, 1, 2]:
-                    globals.is_break = False #突破訊號復歸
-                    globals.is_backtest = False #回測訊號復歸
-                    globals.direction = 0 #方向復歸
-                    globals.aisle_type = 0 #比較類型復歸
                 levels.append((i,l))
         elif is_resistance(df,i):
             l = df['high'][i]
             if is_far_from_level(l, levels, df):
-                if globals.aisle_type not in [0, 1, 2]:
-                    globals.is_break = False #突破訊號復歸
-                    globals.is_backtest = False #回測訊號復歸
-                    globals.direction = 0 #方向復歸
-                    globals.aisle_type = 0 #比較類型復歸
                 levels.append((i,l))
         
     data = convert_arr_sort(levels)
