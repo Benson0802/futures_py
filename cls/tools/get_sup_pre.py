@@ -1,90 +1,52 @@
 import numpy as np
-import globals
+from sklearn.cluster import KMeans
+import pandas as pd
+import math
 
-def detect_level_method_2(df):
+def detect_level_method(df):
     '''
-    取得支撐壓力的方法2
+    取得支撐壓力的方法
     '''
-    levels = []
-    max_list = []
-    min_list = []
-    for i in range(5, len(df)-5):
-        high_range = df['high'][i-5:i+4]
-        current_max = high_range.max()
-        if current_max not in max_list:
-            max_list = []
-        max_list.append(current_max)
-        if len(max_list) == 5 and is_far_from_level(current_max, levels, df):
-            if globals.aisle_type not in [0, 1, 2]:
-                globals.is_break = False #突破訊號復歸
-                globals.is_backtest = False #回測訊號復歸
-                globals.direction = 0 #方向復歸
-                globals.aisle_type = 0 #比較類型復歸
-            levels.append((high_range.idxmax(), current_max))
-            
-        low_range = df['low'][i-5:i+5]
-        current_min = low_range.min()
-        if current_min not in min_list:
-            min_list = []
-        min_list.append(current_min)
-        if len(min_list) == 5 and is_far_from_level(current_min, levels, df):
-            if globals.aisle_type not in [0, 1, 2]:
-                globals.is_break = False #突破訊號復歸
-                globals.is_backtest = False #回測訊號復歸
-                globals.direction = 0 #方向復歸
-                globals.aisle_type = 0 #比較類型復歸
-            levels.append((low_range.idxmin(), current_min))
-            
-    data = convert_arr_sort(levels)
-    return data
+    # df = pd.read_csv('data/60Min.csv').tail(500)
+    # df['datetime'] = pd.to_datetime(df['datetime'])
+    # df.set_index(['datetime'], inplace=True)
+    close = np.array(df["close"])
     
-def detect_level_method_1(df):
-    '''
-    取得支撐壓力(方法1)
-    '''
+    K = 6
     levels = []
-    for i in range(2,df.shape[0]-2):
-        if is_support(df,i):
-            l = df['low'][i]
-            if is_far_from_level(l, levels, df):
-                levels.append((i,l))
-        elif is_resistance(df,i):
-            l = df['high'][i]
-            if is_far_from_level(l, levels, df):
-                levels.append((i,l))
-        
-    data = convert_arr_sort(levels)
-    return data
+    min_max_values = [[np.inf, -np.inf] for _ in range(K)]  # 初始化 min_max_values
+
+    kmeans = KMeans(n_clusters=6).fit(df.values.reshape(-1, 1))
+    clusters = kmeans.predict(df.values.reshape(-1, 1))[:len(df)]
+
+    # Get min/max for each cluster
+    for i in range(len(close)):
+        # Get cluster assigned to price
+        cluster = clusters[i]
+        # Compare for min value
+        if close[i] < min_max_values[cluster][0]:
+            min_max_values[cluster][0] = close[i]
+        # Compare for max value
+        if close[i] > min_max_values[cluster][1]:
+            min_max_values[cluster][1] = close[i]
+
+    # Create container for combined values
+    output = []
+    # Sort based on cluster minimum
+    s = sorted(min_max_values, key=lambda x: x[0])
+    # For each cluster get average of
+    for i, (_min, _max) in enumerate(s):
+        # Append min from first cluster
+        if i == 0:
+            output.append(_min)
+        # Append max from last cluster
+        if i == len(min_max_values) - 1:
+            output.append(_max)
+        # Append average from cluster and adjacent for all others
+        else:
+            output.append(sum([_max, s[i+1][0]]) / 2)
+
+    for cluster_avg in output:
+        levels.append(math.ceil(cluster_avg))
     
-def is_far_from_level(value, levels, df):
-    '''
-    判斷新的支壓存不存在
-    '''
-    ave =  np.mean(df['high'] - df['low'])    
-    return np.sum([abs(value-level)<ave for _,level in levels])==0
-
-def is_support(df,i):
-    '''
-    取得支撐
-    '''
-    cond1 = df['low'][i] < df['low'][i-1]   
-    cond2 = df['low'][i] < df['low'][i+1]   
-    cond3 = df['low'][i+1] < df['low'][i+2]   
-    cond4 = df['low'][i-1] < df['low'][i-2]  
-    return (cond1 and cond2 and cond3 and cond4) 
-
-def is_resistance(df,i):
-    '''
-    取得壓力
-    ''' 
-    cond1 = df['high'][i] > df['high'][i-1]   
-    cond2 = df['high'][i] > df['high'][i+1]   
-    cond3 = df['high'][i+1] > df['high'][i+2]   
-    cond4 = df['high'][i-1] > df['high'][i-2]  
-    return (cond1 and cond2 and cond3 and cond4)
-
-def convert_arr_sort(data):
-    sorted_data = sorted(data, key=lambda x: x[1])  # 按第二个元素排序
-    selected_data = sorted_data[:5]  # 选择前5个元素
-    result = [x[1] for x in selected_data]  # 提取第二个元素
-    return result
+    return levels

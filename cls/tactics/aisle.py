@@ -258,8 +258,10 @@ class aisle():
                               * pd.Series(df_n.index)).round().astype(int)
         
         #取得支撐壓力(方法1)
-        #globals.levels = suppre.detect_level_method_1(df)
-        globals.levels = suppre.detect_level_method_2(df)
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        df.set_index(['datetime'], inplace=True)
+        globals.levels = suppre.detect_level_method(df)
+
         for level in globals.levels:
             df_n["level"+str(level)] = level
             
