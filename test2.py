@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 
-# 假設有以下的K線資料
+# 假設有以下的Kpi線資料
 k_lines = np.array([[1, 5], [2, 6], [3, 8], [4, 10], [5, 12], [6, 15]])
 
 # 提取出收盤價
@@ -19,7 +19,7 @@ future_time_series = np.arange(len(close_prices), len(close_prices)+5).reshape(-
 future_close_prices = reg.predict(future_time_series)
 
 # 繪製趨勢線
-plt.plot(time_series, close_prices, label='Close Prices')
+plt.plot(time_series, close_prices, label='close Prices')
 plt.plot(np.concatenate((time_series, future_time_series)), np.concatenate((reg.predict(time_series), future_close_prices)), label='Trend Line')
 plt.legend()
 plt.show()
