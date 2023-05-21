@@ -12,8 +12,7 @@ import threading
 from matplotlib.animation import FuncAnimation
 import cls.tools.trun_adam as adam
 import cls.tools.get_sup_pre as suppre
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+import cls.tools.get_pattern as pattern
 
 class aisle():
     '''
@@ -215,26 +214,20 @@ class aisle():
         '''
         df = None
         if minute == 1:
-            self.df_1Min = pd.read_csv('data/1Min.csv', index_col='datetime')
-            df = self.df_1Min.tail(globals.how).reset_index(drop=False)
+            df = self.df_1Min.tail(globals.how)
         elif minute == 5:
-            self.df_5Min = pd.read_csv('data/5Min.csv', index_col='datetime')
-            df = self.df_5Min.tail(globals.how).reset_index(drop=False)
+            df = self.df_5Min.tail(globals.how)
         elif minute == 15:
-            self.df_15Min = pd.read_csv('data/15Min.csv', index_col='datetime')
-            df = self.df_15Min.tail(globals.how).reset_index(drop=False)
+            df = self.df_15Min.tail(globals.how)
         elif minute == 30:
-            self.df_30Min = pd.read_csv('data/30Min.csv', index_col='datetime')
-            df = self.df_30Min.tail(globals.how).reset_index(drop=False)
+            df = self.df_30Min.tail(globals.how)
         elif minute == 60:
-            self.df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
-            df = self.df_60Min.tail(globals.how).reset_index(drop=False)
+            df = self.df_60Min.tail(globals.how)
         elif minute == 1440:
-            self.df_1day = pd.read_csv('data/1Day.csv', index_col='datetime')
-            df = self.df_1day.tail(globals.how).reset_index(drop=False)
+            df = self.df_1day.tail(globals.how)
 
-        # 線性回歸計算方式
         df_n = df.reset_index()
+        # 線性回歸計算方式
         reg_up = linregress(x=df_n.index, y=df_n.close)
         up_line = reg_up[1] + reg_up[0] * df_n.index
         df_temp_low = df_n[df_n["close"] < up_line]
@@ -258,13 +251,16 @@ class aisle():
                               * pd.Series(df_n.index)).round().astype(int)
         
         #取得支撐壓力(方法1)
-        df['datetime'] = pd.to_datetime(df['datetime'])
+        df['datetime'] = pd.to_datetime(df_n['datetime'])
         df.set_index(['datetime'], inplace=True)
         globals.levels = suppre.detect_level_method(df)
 
         for level in globals.levels:
             df_n["level"+str(level)] = level
-            
+        
+        #判斷型態
+        df_n = pattern.get_pattern(df_n)
+        
         return df_n
 
     def get_trend_line(self, df_n):
