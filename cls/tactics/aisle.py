@@ -12,6 +12,7 @@ import threading
 from matplotlib.animation import FuncAnimation
 import cls.tools.trun_adam as adam
 import cls.tools.get_sup_pre as suppre
+import cls.tools.fibonacci as fib
 import cls.tools.get_pattern as pattern
 from sklearn.linear_model import LinearRegression
 from talib import abstract
@@ -46,7 +47,7 @@ class aisle():
         # macd = abstract.MACD(trend_line['close'], fastperiod=12, slowperiod=26, signalperiod=9)
         # rsi = abstract.RSI(trend_line['close'], 14)
         # bbnds = abstract.BBANDS(trend_line['close'], timeperiod=20, nbdevup=2.0, nbdevdn=2.0, matype=0)
-        print(macd)
+        # print(macd)
         print('支撐壓力 {}'.format(globals.levels))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
@@ -316,17 +317,22 @@ class aisle():
         df_n["low_trend"] = (reg_low.intercept_ + reg_low.coef_ * pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high.intercept_ + reg_high.coef_ * pd.Series(df_n.index)).round().astype(int)
         
-        #取得支撐壓力(方法1)
-        df['datetime'] = pd.to_datetime(df_n['datetime'])
-        df.set_index(['datetime'], inplace=True)
-        globals.levels = suppre.detect_level_method(df)
+        # #取得支撐壓力
+        # df['datetime'] = pd.to_datetime(df_n['datetime'])
+        # df.set_index(['datetime'], inplace=True)
+        # globals.levels = suppre.detect_level_method(df)
+
+        # for level in globals.levels:
+        #     df_n["level"+str(level)] = level
+
+        globals.levels = fib.fibonacci(df)
 
         for level in globals.levels:
             df_n["level"+str(level)] = level
         
         #判斷型態
         df_n = pattern.get_pattern(df_n)
-        
+        print(df_n)
         return df_n
 
     def get_trend_line(self, df_n):
