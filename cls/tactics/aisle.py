@@ -13,6 +13,7 @@ from matplotlib.animation import FuncAnimation
 import cls.tools.trun_adam as adam
 import cls.tools.get_sup_pre as suppre
 import cls.tools.get_pattern as pattern
+from sklearn.linear_model import LinearRegression
 
 class aisle():
     '''
@@ -227,28 +228,25 @@ class aisle():
             df = self.df_1day.tail(globals.how).reset_index(drop=False)
 
         df_n = df.reset_index()
+
         # 線性回歸計算方式
-        reg_up = linregress(x=df_n.index, y=df_n.close)
-        up_line = reg_up[1] + reg_up[0] * df_n.index
+        reg_up = LinearRegression().fit(df_n.index.to_frame(), df_n["close"])
+        up_line = reg_up.intercept_ + reg_up.coef_ * df_n.index
         df_temp_low = df_n[df_n["close"] < up_line]
         df_temp_high = df_n[df_n["close"] > up_line]
 
         while len(df_temp_low) >= 5:
-            reg_low = linregress(x=df_temp_low.index, y=df_temp_low.close)
-            up_line_low = (reg_low[1] + reg_low[0] *
-                           pd.Series(df_n.index)).round().astype(int)
+            reg_low = LinearRegression().fit(df_temp_low.index.to_frame(), df_temp_low["close"])
+            up_line_low = (reg_low.intercept_ + reg_low.coef_ * pd.Series(df_n.index)).round().astype(int)
             df_temp_low = df_n[df_n["close"] < up_line_low]
 
         while len(df_temp_high) >= 5:
-            reg_high = linregress(x=df_temp_high.index, y=df_temp_high.close)
-            up_line_high = (reg_high[1] + reg_high[0] *
-                            pd.Series(df_n.index)).round().astype(int)
+            reg_high = LinearRegression().fit(df_temp_high.index.to_frame(), df_temp_high["close"])
+            up_line_high = (reg_high.intercept_ + reg_high.coef_ * pd.Series(df_n.index)).round().astype(int)
             df_temp_high = df_n[df_n["close"] > up_line_high]
 
-        df_n["low_trend"] = (reg_low[1] + reg_low[0] *
-                             pd.Series(df_n.index)).round().astype(int)
-        df_n["high_trend"] = (reg_high[1] + reg_high[0]
-                              * pd.Series(df_n.index)).round().astype(int)
+        df_n["low_trend"] = (reg_low.intercept_ + reg_low.coef_ * pd.Series(df_n.index)).round().astype(int)
+        df_n["high_trend"] = (reg_high.intercept_ + reg_high.coef_ * pd.Series(df_n.index)).round().astype(int)
         
         #取得支撐壓力(方法1)
         df['datetime'] = pd.to_datetime(df_n['datetime'])
