@@ -214,17 +214,17 @@ class aisle():
         '''
         df = None
         if minute == 1:
-            df = self.df_1Min.tail(globals.how)
+            df = self.df_1Min.tail(globals.how).reset_index(drop=False)
         elif minute == 5:
-            df = self.df_5Min.tail(globals.how)
+            df = self.df_5Min.tail(globals.how).reset_index(drop=False)
         elif minute == 15:
-            df = self.df_15Min.tail(globals.how)
+            df = self.df_15Min.tail(globals.how).reset_index(drop=False)
         elif minute == 30:
-            df = self.df_30Min.tail(globals.how)
+            df = self.df_30Min.tail(globals.how).reset_index(drop=False)
         elif minute == 60:
-            df = self.df_60Min.tail(globals.how)
+            df = self.df_60Min.tail(globals.how).reset_index(drop=False)
         elif minute == 1440:
-            df = self.df_1day.tail(globals.how)
+            df = self.df_1day.tail(globals.how).reset_index(drop=False)
 
         df_n = df.reset_index()
         # 線性回歸計算方式
@@ -312,7 +312,79 @@ class aisle():
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
+            # # 標記頭肩底
+            # if "head_shoulder_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['head_shoulder_pattern'] == "Inverse Head and Shoulder"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='^', linestyle='None', markersize=8, color='red')
             
+            # # 標記頭肩頂
+            # if "head_shoulder_pattern" in df_n.columns:
+            #     triangle_points = df_n[df_n['head_shoulder_pattern'] == "Head and Shoulder"]
+            #     if not triangle_points.empty:
+            #         ax[0].plot(triangle_points.index, triangle_points['close'], marker='v', linestyle='None', markersize=8, color='redgreen')
+        
+            # #標記區間底
+            # if "multiple_top_bottom_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['multiple_top_bottom_pattern'] == "Multiple Bottom"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='-', linestyle='None', markersize=8, color='red')
+        
+            # #標記區間頂
+            # if "multiple_top_bottom_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['multiple_top_bottom_pattern'] == "Multiple Top"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='-', linestyle='None', markersize=8, color='green')
+        
+            # #標記上升三角
+            # if "triangle_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['triangle_pattern'] == "Ascending Triangle"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='2', linestyle='None', markersize=8, color='red')
+        
+            # #標記下袶三角
+            # if "triangle_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['triangle_pattern'] == "Descending Triangle"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='1', linestyle='None', markersize=8, color='green')
+       
+
+            # #標記上升楔形
+            # if "wedge_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['wedge_pattern'] == "Wedge Up"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='h', linestyle='None', markersize=8, color='red')
+        
+            # #標記下袶楔形
+            # if "wedge_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['wedge_pattern'] == "Wedge Down"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='h', linestyle='None', markersize=8, color='green')
+       
+            # #標記上升通道
+            # if "channel_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['channel_pattern'] == "Channel Up"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='d', linestyle='None', markersize=8, color='red')
+        
+            # #標記下袶通道
+            # if "channel_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['channel_pattern'] == "Channel Down"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='d', linestyle='None', markersize=8, color='green')
+       
+            # #標記雙頂
+            # if "double_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Top"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='red')
+            
+            # #標記雙底
+            # if "double_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Bottom"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='green')
+        
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
@@ -322,6 +394,80 @@ class aisle():
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
         
+    #     # 標記頭肩底
+    #     if "head_shoulder_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['head_shoulder_pattern'] == "Inverse Head and Shoulder"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='^', linestyle='None', markersize=8, color='red')
+        
+    #     # 標記頭肩頂
+    #     if "head_shoulder_pattern" in df_n.columns:
+    #         triangle_points = df_n[df_n['head_shoulder_pattern'] == "Head and Shoulder"]
+    #         if not triangle_points.empty:
+    #             ax[0].plot(triangle_points.index, triangle_points['close'], marker='v', linestyle='None', markersize=8, color='green')
+    
+    #     #標記區間底
+    #     if "multiple_top_bottom_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['multiple_top_bottom_pattern'] == "Multiple Bottom"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='-', linestyle='None', markersize=8, color='red')
+       
+    #     #標記區間頂
+    #     if "multiple_top_bottom_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['multiple_top_bottom_pattern'] == "Multiple Top"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='-', linestyle='None', markersize=8, color='green')
+    
+    #     #標記上升三角
+    #     if "triangle_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['triangle_pattern'] == "Ascending Triangle"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='2', linestyle='None', markersize=8, color='red')
+       
+    #     #標記下袶三角
+    #     if "triangle_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['triangle_pattern'] == "Descending Triangle"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='1', linestyle='None', markersize=8, color='green')
+    
+    
+    #     #標記上升楔形
+    #     if "wedge_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['wedge_pattern'] == "Wedge Up"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='h', linestyle='None', markersize=8, color='red')
+        
+    #     #標記下袶楔形
+    #     if "wedge_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['wedge_pattern'] == "Wedge Down"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='h', linestyle='None', markersize=8, color='green')
+       
+    #    #標記上升通道
+    #     if "channel_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['channel_pattern'] == "Channel Up"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='d', linestyle='None', markersize=8, color='red')
+        
+    #     #標記下袶通道
+    #     if "channel_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['channel_pattern'] == "Channel Down"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='d', linestyle='None', markersize=8, color='green')
+       
+    #     #標記雙頂
+    #     if "double_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Top"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='red')
+        
+    #     #標記雙底
+    #     if "double_pattern" in df_n.columns:
+    #         inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Bottom"]
+    #         if not inverse_triangle_points.empty:
+    #             ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='green')
+       
+    
         ani = FuncAnimation(fig, update, interval=600000)
         plt.show()
 
