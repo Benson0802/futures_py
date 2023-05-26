@@ -6,6 +6,7 @@ import time
 import numpy as np
 from dateutil.relativedelta import relativedelta
 import globals
+import logging
 
 class convertK():
     '''
@@ -166,7 +167,7 @@ class convertK():
                 df = pd.read_csv(file_path, index_col='datetime')
                 last_index = pd.to_datetime(last_row.name)
                 df.index = pd.to_datetime(df.index)
-                df.drop(labels=[last_index.to_pydatetime()], inplace=True)
+                df.drop(labels=[last_index], inplace=True)
                 df.to_csv(file_path, index_label='datetime')
             
             resampled_df['open'] = pd.Series(resampled_df['open'],dtype='int32')

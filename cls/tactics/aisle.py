@@ -61,27 +61,21 @@ class aisle():
                 if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
                     if self.close > data['forecast_high']: #突破上通道等回測
                         self.break_set(True,2,1)
-                        time.sleep(60)
                         return
                     elif self.close > globals.levels[-1]: #突破最高壓力線等回測
                         self.break_set(True,2,3)
-                        time.sleep(60)
                         return
                     elif self.close > globals.levels[-2]: #突破次高壓力線等回測
                         self.break_set(True,2,5)
-                        time.sleep(60)
                         return
                     elif self.close < data['forecast_low']: #跌破下通道等回測
                         self.break_set(True,1,2)
-                        time.sleep(60)
                         return
                     elif self.close < globals.levels[0]: #跌破最低支撐線等回測
                         self.break_set(True,1,4)
-                        time.sleep(60)
                         return
                     elif self.close < globals.levels[1]: #跌破最次低支撐線等回測
                         self.break_set(True,1,6)
-                        time.sleep(60)
                         return
                     else:
                         print('沒突破/跌破訊號~等待')
@@ -89,30 +83,24 @@ class aisle():
                     if globals.direction == 2: #方向空 判斷是否回測
                         if globals.aisle_type == 1 and self.close in range(data['forecast_high'] - 5, data['forecast_high'] + 5):#上通道的上下5點當已回測
                             globals.is_backtest = True
-                            time.sleep(60)
                             return
                         elif globals.aisle_type == 3 and self.close in range(globals.levels[-1] - 5, globals.levels[-1] + 5):#最高壓力線的上下5點當已回測
                             globals.is_backtest = True
-                            time.sleep(60)
                             return
                         elif globals.aisle_type == 5 and self.close in range(globals.levels[-2] - 5, globals.levels[-2] + 5):#次高壓力線的上下5點當已回測
                             globals.is_backtest = True
-                            time.sleep(60)
                             return
                         else:
                             print('已突破高點未回測~等待')
                     elif globals.direction == 1: #方向多 判斷是否回測
                         if globals.aisle_type == 2 and self.close in range(data['forecast_low'] - 5, data['forecast_low'] + 5):#下通道的上下5點當已回測
                             globals.is_backtest = True
-                            time.sleep(60)
                             return
                         elif globals.aisle_type == 4 and self.close in range(globals.levels[0] - 5, globals.levels[0] + 5):#最低支撐線的上下5點當已回測
                             globals.is_backtest = True
-                            time.sleep(60)
                             return
                         elif globals.aisle_type == 6 and self.close in range(globals.levels[1] - 5, globals.levels[1] + 5):#次低支撐線的上下5點當已回測
                             globals.is_backtest = True
-                            time.sleep(60)
                             return
                         else:
                             print('已跌破低點未回測~等待')
@@ -158,30 +146,24 @@ class aisle():
                 if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
                     if self.close < data['forecast_low']: #跌破下通道等回測
                         self.break_set(True,1,2)
-                        time.sleep(60)
                         return
                     elif self.close < globals.levels[0]: #跌破最低支撐線等回測
                         self.break_set(True,1,4)
-                        time.sleep(60)
                         return
                     elif self.close < globals.levels[1]: #跌破最次低支撐線等回測
                         self.break_set(True,1,6)
-                        time.sleep(60)
                         return
                     else:
                         print('沒突破/跌破訊號~等待')
                 elif globals.is_break == True and globals.is_backtest == False: #已突破/跌破未回測
                     if globals.aisle_type == 2 and self.close in range(data['forecast_low'] - 5, data['forecast_low'] + 5):#下通道的上下5點當已回測
                         globals.is_backtest = True
-                        time.sleep(60)
                         return
                     elif globals.aisle_type == 4 and self.close in range(globals.levels[0] - 5, globals.levels[0] + 5):#最低支撐線的上下5點當已回測
                         globals.is_backtest = True
-                        time.sleep(60)
                         return
                     elif globals.aisle_type == 6 and self.close in range(globals.levels[1] - 5, globals.levels[1] + 5):#次低支撐線的上下5點當已回測
                         globals.is_backtest = True
-                        time.sleep(60)
                         return
                     else:
                         print('已跌破低點未回測~等待')
@@ -208,30 +190,30 @@ class aisle():
                 if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
                     if self.close > data['forecast_high']: #突破上通道等回測
                         self.break_set(True,2,1)
-                        time.sleep(60)
+                        
                         return
                     elif self.close > globals.levels[-1]: #突破最高壓力線等回測
                         self.break_set(True,2,3)
-                        time.sleep(60)
+                        
                         return
                     elif self.close > globals.levels[-2]: #突破次高壓力線等回測
                         self.break_set(True,2,5)
-                        time.sleep(60)
+                        
                         return
                     else:
                         print('沒突破/跌破訊號~等待')
                 elif globals.is_break == True and globals.is_backtest == False: #已突破/跌破未回測
                     if globals.aisle_type == 1 and self.close in range(data['forecast_high'] - 5, data['forecast_high'] + 5):#上通道的上下5點當已回測
                         globals.is_backtest = True
-                        time.sleep(60)
+                        
                         return
                     elif globals.aisle_type == 3 and self.close in range(globals.levels[-1] - 5, globals.levels[-1] + 5):#最高壓力線的上下5點當已回測
                         globals.is_backtest = True
-                        time.sleep(60)
+                        
                         return
                     elif globals.aisle_type == 5 and self.close in range(globals.levels[-2] - 5, globals.levels[-2] + 5):#次高壓力線的上下5點當已回測
                         globals.is_backtest = True
-                        time.sleep(60)
+                        
                         return
                     else:
                         print('已突破高點未回測~等待')
