@@ -1,4 +1,4 @@
-#翻亞當目標價
+#翻亞當目標價(只能翻多方無法翻空方待修正)
 import keras
 import numpy as np
 
