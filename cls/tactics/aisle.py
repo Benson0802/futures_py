@@ -314,7 +314,6 @@ class aisle():
         
         #判斷型態
         df_n = pattern.get_pattern(df_n)
-        print(df_n)
         return df_n
 
     def get_trend_line(self, df_n):
