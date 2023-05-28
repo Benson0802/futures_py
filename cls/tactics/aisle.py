@@ -15,7 +15,6 @@ import cls.tools.get_sup_pre as suppre
 import cls.tools.fibonacci as fib
 import cls.tools.get_pattern as pattern
 from sklearn.linear_model import LinearRegression
-from talib import abstract
 import time
 
 class aisle():
@@ -42,12 +41,6 @@ class aisle():
     def run(self, minute):
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
-        #ema20 = abstract.EMA(trend_line['close'], 20)
-        # ema60 = abstract.EMA(trend_line['close'], 60)
-        # macd = abstract.MACD(trend_line['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        # rsi = abstract.RSI(trend_line['close'], 14)
-        # bbnds = abstract.BBANDS(trend_line['close'], timeperiod=20, nbdevup=2.0, nbdevdn=2.0, matype=0)
-        # print(macd)
         print('支撐壓力 {}'.format(globals.levels))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
