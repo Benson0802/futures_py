@@ -49,8 +49,6 @@ class aisle():
         print('is_backtest:'+str(globals.is_backtest))
         print('aisle_type:'+str(globals.aisle_type))
         
-        globals.is_break = True
-        globals.is_backtest = True
         #改以支壓方式進出場
         level_keys = [key for key in trend_line.columns if key.startswith('level')]
         last_values = [trend_line[key].iloc[-1] for key in level_keys]
