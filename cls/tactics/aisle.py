@@ -240,7 +240,7 @@ class aisle():
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
         
-        ani = FuncAnimation(fig, update, interval=600000)
+        ani = FuncAnimation(fig, update, interval=60000)
         plt.show()
 
     def trade(self, type, lot):
