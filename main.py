@@ -68,7 +68,7 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
         #策略判斷
         tactics = aisle(tick.close)
-        tactics.run(5)
+        tactics.run(15)
         # ord = indicator(tick.close)
         # ord.run(5)
         globals.now_min = None

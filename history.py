@@ -32,9 +32,9 @@ import datetime
 
 globals.initialize()
 while (True):
-    # ord = aisle(16650)
-    # ord.run(5)
+    ord = aisle(16650)
+    ord.run(15)
     # ord = order(16735)
     # ord.strategy2(5)
-    ord = indicator(15685)
-    ord.run(5)
+    # ord = indicator(15685)
+    # ord.run(5)
