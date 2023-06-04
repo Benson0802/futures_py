@@ -58,11 +58,11 @@ class indicator():
         # rsi = abstract.RSI(df['close'], 14)
         # bbnds = abstract.BBANDS(df['close'], timeperiod=20, nbdevup=2.0, nbdevdn=2.0, matype=0)
         if self.has_order == False:# 目前沒單
-            #20dema斜率向上且穿過60dema進多單
+            #20dema斜率向上且穿過200 sema進多單
             if int(ema200_slope[-1]) > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
                 self.trade(1, 1)  # 買進多單
                 self.has_order = True #標記有單
-            #20dema斜率向下且穿過60dema進空單
+            #20dema斜率向下且穿過200 sema進空單
             elif int(ema200_slope[-1]) < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
                 self.trade(1, -1)  # 買進空單
                 self.has_order = True #標記有單
@@ -72,18 +72,18 @@ class indicator():
             self.has_order = self.check_trend_loss()
             
         if globals.has_thread == False:
+            globals.has_thread = True
             thread = threading.Thread(
                 target=self.draw_trend, args=(minute, df))
             thread.start()
-            globals.has_thread = True
         
     def draw_trend(self, minute, df):
         '''
         繪製趨勢線
         '''
         mc = mpf.make_marketcolors(up='r', down='g', inherit=True)
-        s = mpf.make_mpf_style(base_mpf_style='yahoo', marketcolors=mc)
-        kwargs = dict(type='candle', mav=(200), volume=True, figratio=(10, 8), figscale=0.75, title="60Min", style=s)
+        s = mpf.make_mpf_style(base_mpf_style='binance', marketcolors=mc)
+        kwargs = dict(type='candle', mav=(200), volume=True, figratio=(10, 8), figscale=1, title="5Min", style=s)
         fig, ax = mpf.plot(df, **kwargs, returnfig=True)
         
         def update(_):
@@ -100,12 +100,12 @@ class indicator():
                 updated_df = self.df_60Min.tail(globals.how)
             elif minute == 1440:
                 updated_df = self.df_1day.tail(globals.how)
-            
+                
             # 清除現有的圖形並重新繪製更新後的資料
             ax.clear()
             mpf.plot(updated_df, **kwargs, ax=ax)
-        
-        ani = FuncAnimation(fig, update, interval=600000)
+            
+        ani = FuncAnimation(fig, update, interval=60000)
         plt.show()
 
     def trade(self, type, lot):

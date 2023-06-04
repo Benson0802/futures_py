@@ -88,10 +88,10 @@ class aisle():
             self.has_order = self.check_trend_loss(data)
         
         if globals.has_thread == False:
+            globals.has_thread = True
             thread = threading.Thread(
                 target=self.draw_trend, args=(minute, trend_line))
             thread.start()
-            globals.has_thread = True
     
     def break_set(self, is_break,direction,aisle_type):
         '''
@@ -230,7 +230,7 @@ class aisle():
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
-
+            
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
