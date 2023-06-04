@@ -22,7 +22,8 @@ class check_opening():
             if self.__now.weekday() != 5 and self.__now.weekday() != 6:
                 self.__night_close = datetime.datetime(self.__tomorrow.year, self.__tomorrow.month, self.__tomorrow.day, 5, 0)
         else:
-            self.__night_close = datetime.datetime(self.__tomorrow.year, self.__tomorrow.month, now.day, 5, 0)
+            # self.__night_close = datetime.datetime(self.__tomorrow.year, self.__tomorrow.month, now.day, 5, 0)
+            self.__night_close = datetime.datetime(now.year, now.month, now.day, 5, 0) + datetime.timedelta(days=1)
         self.__response = requests.get("https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/{0}.json".format(self.__now.year),timeout=60)
 
     def check_date(self):

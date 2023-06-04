@@ -19,8 +19,8 @@ import datetime
 
 #     kbars = api.kbars(
 #         contract=api.Contracts.Futures.TXF.TXFR1,
-#         start='2023-05-22',
-#         end='2023-05-27',
+#         start='2023-05-29',
+#         end='2023-06-03',
 #     ) 
 #     ck = convertK(kbars)
 #     ck.write_history_1k_bar()
@@ -33,8 +33,8 @@ import datetime
 globals.initialize()
 while (True):
     # ord = aisle(16650)
-    # ord.run(60)
-    # ord = order(15685)
-    # ord.strategy2(60)
+    # ord.run(5)
+    # ord = order(16735)
+    # ord.strategy2(5)
     ord = indicator(15685)
-    ord.run(60)
+    ord.run(5)

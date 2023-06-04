@@ -12,6 +12,8 @@ matplotlib.use('TkAgg')
 import threading
 from matplotlib.animation import FuncAnimation
 import csv
+import datetime
+import cls.notify as lineMeg
 
 class indicator():
     '''
@@ -50,20 +52,18 @@ class indicator():
             df = self.df_1day.tail(globals.how)
 
         df.rename(columns={'Turnover':'volume'}, inplace = True) 
-        ema20 = abstract.DEMA(df['close'], 20)
-        ema60 = abstract.DEMA(df['close'], 60)
-        ema20_slope = np.diff(ema20)  # 計算EMA20的斜率
-        ema60_slope = np.diff(ema60)  # 計算EMA60的斜率
+        ema200 = abstract.SMA(df['close'], 200)
+        ema200_slope = np.diff(ema200)  # 計算EMA60的斜率
         macd, signal, hist = abstract.MACD(df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
         # rsi = abstract.RSI(df['close'], 14)
         # bbnds = abstract.BBANDS(df['close'], timeperiod=20, nbdevup=2.0, nbdevdn=2.0, matype=0)
         if self.has_order == False:# 目前沒單
             #20dema斜率向上且穿過60dema進多單
-            if ema20_slope > 0 and ema20[-1] >= ema60[-1] and ema20[-1] in range(ema60[-1]-5, ema60[-1] +5):
+            if int(ema200_slope[-1]) > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
                 self.trade(1, 1)  # 買進多單
                 self.has_order = True #標記有單
             #20dema斜率向下且穿過60dema進空單
-            elif ema20_slope < 0 and ema20[-1] <= ema60[-1] and ema20[-1] in range(ema60[-1]-5, ema60[-1] +5):
+            elif int(ema200_slope[-1]) < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
                 self.trade(1, -1)  # 買進空單
                 self.has_order = True #標記有單
             else:
@@ -83,7 +83,7 @@ class indicator():
         '''
         mc = mpf.make_marketcolors(up='r', down='g', inherit=True)
         s = mpf.make_mpf_style(base_mpf_style='yahoo', marketcolors=mc)
-        kwargs = dict(type='candle', mav=(20, 60), volume=True, figratio=(10, 8), figscale=0.75, title="60Min", style=s)
+        kwargs = dict(type='candle', mav=(200), volume=True, figratio=(10, 8), figscale=0.75, title="60Min", style=s)
         fig, ax = mpf.plot(df, **kwargs, returnfig=True)
         
         def update(_):
@@ -126,7 +126,7 @@ class indicator():
         elif type == -1 and lot == -1:
             print('多單賣出')
             total_lot = 0
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         self.total_balance = self.total_balance + self.balance
         with open('data/trade.csv', 'a', encoding='utf-8', newline='') as file:

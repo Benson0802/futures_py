@@ -1,57 +1,89 @@
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import pandas as pd
-# from talib import abstract
+#支撐壓力
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+import plotly.graph_objects as go
 
-# # 函數功能：將頻域數據轉換成時序數據
-# # bins爲頻域數據，n設置使用前多少個頻域數據，loop設置生成數據的長度
-# def fft_combine(bins, n, loops=1):
-#     length = int(len(bins) * loops)
-#     data = np.zeros(length)
-#     index = loops * np.arange(0, length, 1.0) / length * (2 * np.pi)
-#     for k, p in enumerate(bins[:n]):
-#         if k != 0 : p *= 2 # 除去直流成分之外, 其餘的係數都 * 2
-#         data += np.real(p) * np.cos(k*index) # 餘弦成分的係數爲實數部分
-#         data -= np.imag(p) * np.sin(k*index) # 正弦成分的係數爲負的虛數部分
-#     return index, data
+df = pd.read_csv('data/60Min.csv')
+df['datetime'] = pd.to_datetime(df['datetime'])
+df.set_index(['datetime'], inplace=True)
+df = df.tail(500)
+df_prices = np.array(df["close"])
 
-# def analyze_fft(dataform1):
-#     lines = dataform1.shape[0]
-#     # 生成隨機數
-#     x = np.random.random(100)
-#     y = np.fft.fft(x)
-#     plt.subplot(2, 1, 1)
-#     # plt.plot(x)
-#     plt.plot(dataform1["ma5"])
-#     #dft_a = np.fft.fft(dataform1["ma5"])
+K = 9
+kmeans = KMeans(n_clusters=6).fit(df_prices.reshape(-1, 1))
+clusters = kmeans.predict(df_prices.reshape(-1, 1))
 
-#     plt.subplot(2, 1, 2)
-#     """
-#     plt.plot(dft_a)
-#     #plt.plot(y)
-#     plt.xlabel('Freq (Hz)'), plt.ylabel(' ')
-#     plt.show()"""
-#     ts_log = np.log(dataform1["ma5"])
-#     #ts_log = dataform1["ma5"]
-#     #ts_diff = ts_log.diff(1)
-#     ts_diff = ts_log
-#     ts_diff = ts_diff.dropna()
-#     fy = np.fft.fft(ts_diff)
-#     conv1 = np.real(np.fft.ifft(fy))  # 逆變換
-#     index, conv2 = fft_combine(fy / len(ts_diff), int(len(fy) / 2 - 1), 1.3)
-#     ntotal = (len(ts_diff)/10 +2)*10
+# Create list to hold values, initialized with infinite values
+min_max_values = []
+# init for each cluster group
+for i in range(6):
+    # Add values for which no price could be greater or less
+    min_max_values.append([np.inf, -np.inf])
+    # Print initial values
+    print(min_max_values)
+# Get min/max for each cluster
+for i in range(len(df_prices)):
+    # Get cluster assigned to price
+    cluster = clusters[i]
+    # Compare for min value
+    if df_prices[i] < min_max_values[cluster][0]:
+        min_max_values[cluster][0] = df_prices[i]
+    # Compare for max value
+    if df_prices[i] > min_max_values[cluster][1]:
+        min_max_values[cluster][1] = df_prices[i]
 
-#     plt.plot(ts_diff)
-#     plt.plot(conv1 - 0.5)
-#     plt.plot(conv2 - 1)
-#     plt.xticks(np.arange(1, ntotal, 5))
-#     plt.grid( )
-#     plt.show()
-#     return 0
+print("Initial Min/Max Values:\n", min_max_values)
+# Create container for combined values
+output = []
+# Sort based on cluster minimum
+s = sorted(min_max_values, key=lambda x: x[0])
+# For each cluster get average of
+for i, (_min, _max) in enumerate(s):
+    # Append min from first cluster
+    if i == 0:
+        output.append(_min)
+    # Append max from last cluster
+    if i == len(min_max_values) - 1:
+        output.append(_max)
+    # Append average from cluster and adjacent for all others
+    else:
+        output.append(sum([_max, s[i+1][0]]) / 2)
 
+pd.options.plotting.backend = 'plotly'
+colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo']
 
-# df_60Min = pd.read_csv('data/60Min.csv', index_col='datetime')
-# df = df_60Min.tail(500).reset_index(drop=False)
-# sma5 = abstract.SMA(df['close'], 5)
-# df['ma5'] = sma5
-# analyze_fft(df)
+fig = df.plot.scatter(
+    x=df.index,
+    y="close",
+    color=[colors[i] for i in clusters],
+)
+
+# Add horizontal lines
+for cluster_avg in output[1:-1]:
+    fig.add_hline(y=cluster_avg, line_width=1, line_color="blue")
+    
+# Add a trace of the price for better clarity
+fig.add_trace(go.Trace(
+    x=df.index,
+    y=df['close'],
+    line_color="black",
+    line_width=1
+))
+
+layout = go.Layout(
+    plot_bgcolor='#efefef',
+    showlegend=False,
+    # Font Families
+    font_family='Monospace',
+    font_color='#000000',
+    font_size=20,
+    xaxis=dict(
+        rangeslider=dict(
+            visible=False
+        ))
+)
+
+fig.update_layout(layout)
+# Display plot in local browser window
+fig.show()

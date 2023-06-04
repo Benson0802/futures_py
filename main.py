@@ -8,6 +8,7 @@ from cls.tactics.aisle import aisle
 import datetime
 import globals
 import pandas as pd
+from cls.tactics.indicator import indicator
 
 globals.initialize()
 obj = check_opening()
@@ -47,7 +48,7 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
                 globals.volume += row['volume']
                         
             now = datetime.datetime.now()
-            last_min  = now.strftime('%Y/%m/%d %H:%M')
+            last_min  = now.strftime('%Y/%m/%d %H:%M:S')
             ck = convertK(tick,True)
             ck.write_1k_bar(last_min,globals.volume,globals.amount)
             ck.convert_k_bar('5Min')
@@ -67,7 +68,9 @@ def quote_callback(exchange:Exchange, tick:TickFOPv1):
         ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
         #策略判斷
         tactics = aisle(tick.close)
-        tactics.run(60)
+        tactics.run(5)
+        # ord = indicator(tick.close)
+        # ord.run(5)
         globals.now_min = None
         globals.amount.clear()
         globals.volume = tick.volume
