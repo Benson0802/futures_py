@@ -174,36 +174,35 @@ class order():
             self.df_1day['datetime'] = pd.to_datetime(self.df_1day['datetime'])
             self.df_1day.set_index('datetime', inplace=True)
             df = self.df_1day.tail(self.how)
-        
+
         # 定義 Merton 模型的參數
         mu = 0.05  # 年化收益率
         sigma = 0.2  # 年化波動率
         lamda = 0.3  # 跳躍頻率
         alpha = -0.6  # 跳躍大小的均值
         delta = 0.25  # 跳躍大小的標準差
-        
+
         x = np.arange(0, len(df))
-        y = df['close'].values
+        y = df[['open', 'high', 'low', 'close']].values.T  # 修改為使用四個特徵
         n_harmonics = 20
         n_predict = len(df)
         dt = 1
-        
+
         # 使用 Merton 模型來模擬股票價格的跳躍、擴散過程
-        yf = np.fft.fft(y)  # 對原始價格進行傅立葉轉換
-        yf[n_harmonics + 1:-n_harmonics] = 0  # 只保留低頻的諧波成分
-        reconstructed_ys = np.fft.ifft(yf)  # 對轉換後的價格進行逆傅立葉轉換
+        yf = np.fft.fft(y, axis=1)  # 對每個特徵進行傅立葉轉換
+        yf[:, n_harmonics + 1:-n_harmonics] = 0  # 只保留低頻的諧波成分
+        reconstructed_ys = np.fft.ifft(yf, axis=1)  # 對每個特徵進行逆傅立葉轉換
         t = np.arange(0, n_predict * dt, dt)  # 定義時間序列
-        y_predict = np.real(reconstructed_ys)[:n_predict]  # 取實部作為預測的價格序列
-        diff = np.diff(y_predict)  # 對預測的價格進行差分，得到變化率
-        entry_price = math.ceil(y_predict[-1])  # 取最後一個預測價格向上取整作為入場價格
+        y_predict = np.real(reconstructed_ys[:, :n_predict])  # 取每個特徵的實部作為預測的價格序列
+        diff = np.diff(y_predict, axis=1)  # 對每個特徵的預測價格進行差分，得到變化率
+        entry_price = math.ceil(y_predict[-1, -1])  # 修改為使用收盤價作為入場價格
         stop_loss = 0
         take_profit = 0
-        
+
         # 根據 Merton 模型的參數和預測的價格，計算下一個時間點的價格
         jump = np.random.poisson(lamda * dt)  # 生成一個泊松分佈的隨機數，表示跳躍次數
-        S_next = y_predict[-1] * np.exp((mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * np.random.normal(0, 1) + jump * (np.exp(alpha + delta * np.random.normal(0, 1)) - 1))  # 生成一個對數正態分佈的隨機數，表示下一個時間點的價格
-        diff_next = S_next / y_predict[-1] - 1  # 計算下一個時間點的變化率
-        
+        S_next = y_predict[-1, -1] * np.exp((mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * np.random.normal(0, 1) + jump * (np.exp(alpha + delta * np.random.normal(0, 1)) - 1))  # 修改為使用收盤價作為當前價格
+        diff_next = S_next / y_predict[-1, -1] - 1  # 修改為使用S_next和收盤價計算下一個時間點
         if diff_next > 0:
             trend = 'buy'
             stop_loss = entry_price - self.loss
@@ -212,9 +211,9 @@ class order():
             trend = 'sell'
             stop_loss = entry_price + self.loss
             take_profit = entry_price - self.tp
-        
+
         print(trend)
-        
+
         if self.has_order == False:  # 目前沒單
             if trend == 'buy' and (self.close in range(entry_price - 5, entry_price + 5) or self.close in range(stop_loss, entry_price)):
                 print('買進多單')
@@ -247,9 +246,12 @@ class order():
                     self.balance = ((df_trade['price'] - take_profit) * 50) - 70  # 計算賺賠
                     self.trade(-1, -1)  # 空單停利
                     self.has_order = False
-        
+
+        rmse = np.sqrt(np.mean((y_predict[-1] - y[-1])**2))  # 加入RMSE的計算
+        print("RMSE:", rmse)  # 打印出RMSE的值
+
         return {"df": df, "y_predict": y_predict, 'n_harmonics': n_harmonics, 'trend': trend, 'entry_price': entry_price, 'stop_loss': stop_loss, 'take_profit': take_profit}
-        
+
     # def get_fourier_data(self,minute):
     # '''
     # 原先的傅立葉
@@ -361,7 +363,7 @@ class order():
             ax.legend()
         
         ax.plot(df.index, df['close'], label='Actual')
-        ax.plot(df.index, y_predict, label='Predicted')
+        ax.plot(df.index, y_predict[-1], label='Predicted')
         ax.set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax.set_xlabel('Datetime')
         ax.set_ylabel('Price')
