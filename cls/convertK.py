@@ -158,7 +158,7 @@ class convertK():
                 df1 = df_1k.between_time('08:46', '13:45').resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
                 
             # 篩選15:01到23:59以及00:01到05:00的資料
-            df2 = pd.concat([df_1k.between_time('15:01', '23:59'), df_1k.between_time('00:00', '05:00')]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
+            df2 = pd.concat([df_1k.between_time('15:01', '23:59',inclusive='left'), df_1k.between_time('00:00', '05:00',inclusive='left')]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
             resampled_df = df2.combine_first(df1)
             # 過濾掉 last_row 之前的資料
             if last_row.any():
@@ -166,13 +166,14 @@ class convertK():
                 # 移除舊的lase資料
                 df = pd.read_csv(file_path, index_col='datetime')
                 last_index = pd.to_datetime(last_row.name)
-                df.index = pd.to_datetime(df.index)
+                df.index = pd.to_datetime(df.index,format="%Y-%m-%d %H:%M:%S")
                 df.drop(labels=[last_index], inplace=True)
-                df.to_csv(file_path, index_label='datetime')
+                df.to_csv(file_path, index_label='datetime',date_format='%Y-%m-%d %H:%M:%S')
             
             resampled_df['open'] = pd.Series(resampled_df['open'],dtype='int32')
             resampled_df['high'] = pd.Series(resampled_df['high'],dtype='int32')
             resampled_df['low'] = pd.Series(resampled_df['low'],dtype='int32')
             resampled_df['close'] = pd.Series(resampled_df['close'],dtype='int32')
             resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
+            resampled_df.index = resampled_df.index.strftime("%Y-%m-%d %H:%M:%S")
             resampled_df.to_csv(file_path, mode='a', header=False)
