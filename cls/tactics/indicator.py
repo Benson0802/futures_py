@@ -14,6 +14,7 @@ from matplotlib.animation import FuncAnimation
 import csv
 import datetime
 import cls.notify as lineMeg
+import logging
 
 class indicator():
     '''
@@ -37,6 +38,7 @@ class indicator():
         self.total_balance = self.df_trade['balance'].sum()  # 總賺賠
     
     def run(self, minute):
+        logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
         df = None
         if minute == 1:
             df = self.df_1Min.tail(globals.how)
@@ -59,11 +61,17 @@ class indicator():
         # bbnds = abstract.BBANDS(df['close'], timeperiod=20, nbdevup=2.0, nbdevdn=2.0, matype=0)
         if self.has_order == False:# 目前沒單
             #20dema斜率向上且穿過200 sema進多單
-            if int(ema200_slope[-1]) > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            print(self.close)
+            print(int(ema200[-1]) -5)
+            print(int(ema200[-1]) +5)
+            print(int(ema200_slope[-1]))
+            if ema200_slope[-1] > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+                print("買進多單")
                 self.trade(1, 1)  # 買進多單
                 self.has_order = True #標記有單
             #20dema斜率向下且穿過200 sema進空單
-            elif int(ema200_slope[-1]) < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            elif ema200_slope[-1] < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+                print("買進空單")
                 self.trade(1, -1)  # 買進空單
                 self.has_order = True #標記有單
             else:
@@ -71,11 +79,11 @@ class indicator():
         else:
             self.has_order = self.check_trend_loss()
             
-        if globals.has_thread == False:
-            globals.has_thread = True
-            thread = threading.Thread(
-                target=self.draw_trend, args=(minute, df))
-            thread.start()
+        # if globals.has_thread == False:
+        #     globals.has_thread = True
+        #     thread = threading.Thread(
+        #         target=self.draw_trend, args=(minute, df))
+        #     thread.start()
         
     def draw_trend(self, minute, df):
         '''
@@ -141,6 +149,7 @@ class indicator():
         '''
         依支壓出場停損
         '''
+        logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
         if self.df_trade.empty is False:
             df_trade = self.df_trade.iloc[-1]
 
@@ -149,6 +158,7 @@ class indicator():
                     if df_trade['lot'] == 1:  # 有多單的處理
                         # 收盤價 < 買進價格-n點
                         if self.close <= (df_trade['price'] - self.loss):
+                            logging.info("多單停損 close "+str(self.close)+"<="+str((df_trade['price'] - self.loss)))
                             self.balance = ((self.close - df_trade['price'])*50)-70  # 計算賺賠
                             print('多單停損')
                             self.trade(-1, -1)  # 多單停損
@@ -156,6 +166,7 @@ class indicator():
 
                         # 50點停利
                         if self.close >= (df_trade['price'] + 50):
+                            logging.info("多單停利 close"+str(self.close)+">="+str((df_trade['price'] + 50)))
                             self.balance = ((self.close - df_trade['price'])*50)-70  # 計算賺賠
                             print('多單停利')
                             self.trade(-1, -1)  # 多單停利
@@ -164,12 +175,14 @@ class indicator():
 
                     elif df_trade['lot'] == -1:  # 空單的處理
                         if (self.close >= (df_trade['price'] + self.loss)):
+                            logging.info("空單停損 close "+str(self.close)+">="+str((df_trade['price'] + self.loss)))
                             self.balance = ((df_trade['price'] - self.close)*50)-70  # 計算賺賠
                             print('空單停損')
                             self.trade(-1, 1)  # 空單回補
                             return False
 
-                        if self.close <= (df_trade['price'] + 50):
+                        if self.close <= (df_trade['price'] - 50):
+                            logging.info("空單停利 close "+str(self.close)+"<="+str((df_trade['price'] - 50)))
                             self.balance = ((df_trade['price'] - self.close)*50)-70  # 計算賺賠
                             print('空單停利')
                             self.trade(-1, 1)  # 空單停利
