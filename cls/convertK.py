@@ -105,26 +105,50 @@ class convertK():
         df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
         # 沒任何資料時直接寫入
         if df_1k.empty and len(df_1k) == 0:
-            o = pd.Series(df_real.Open,dtype='int32')
-            h = pd.Series(df_real.High,dtype='int32')
-            l = pd.Series(df_real.Low,dtype='int32')
-            c = pd.Series(df_real.Close,dtype='int32')
-            v = pd.Series(df_real.Volume,dtype='int32')
-            dict = {'datetime': df_real.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
+            o = pd.Series(df_real.Open, dtype='int32')
+            h = pd.Series(df_real.High, dtype='int32')
+            l = pd.Series(df_real.Low, dtype='int32')
+            c = pd.Series(df_real.Close, dtype='int32')
+            v = pd.Series(df_real.Volume, dtype='int32')
+            dict = {'datetime': df_real.ts, 'open': o, 'high': h, 'low': l, 'close': c, 'volume': v}
             df = pd.DataFrame(dict)
             df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
         else:
-            #有資料時判斷最後一筆是否重覆，有重覆就不寫入了
-            if df_real.ts.isin([df_1k.iloc[-1]['datetime']]).any() == False:
-                o = pd.Series(df_real.Open,dtype='int32')
-                h = pd.Series(df_real.High,dtype='int32')
-                l = pd.Series(df_real.Low,dtype='int32')
-                c = pd.Series(df_real.Close,dtype='int32')
-                v = pd.Series(df_real.Volume,dtype='int32')
-                dict = {'datetime': df_real.ts, 'open': o, 'high': h,'low': l, 'close': c, 'volume':v}
-                df = pd.DataFrame(dict)
-                df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path))
-            
+            last_datetime = df_1k.iloc[-1]['datetime']
+            # 有資料時判斷最後一筆是否重覆，有重覆就刪掉重新寫入
+            if not df_real.empty:
+                if last_datetime != df_real.ts.iloc[-1]:
+                    for index, row in df_real.iterrows():
+                        # 取得每一行的資料
+                        ts = row['ts']
+                        if last_datetime < ts:
+                            o = pd.Series(row['Open'], dtype='int32')
+                            h = pd.Series(row['High'], dtype='int32')
+                            l = pd.Series(row['Low'], dtype='int32')
+                            c = pd.Series(row['Close'], dtype='int32')
+                            v = pd.Series(row['Volume'], dtype='int32')
+                            dict = {'datetime': ts, 'open': o, 'high': h, 'low': l, 'close': c, 'volume': v}
+                            df = pd.DataFrame(dict)
+                            df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path), date_format='%Y-%m-%d %H:%M:%S')
+                else:
+                    # 刪除最後一筆資料後重新寫入(update)
+                    df = pd.read_csv(self.min_path, parse_dates=[0])
+                    df.set_index('datetime', inplace=True)  # 假設 'datetime' 是索引標籤的欄位名稱
+                    last_datetime = pd.Timestamp(last_datetime)  # 將 last_datetime 轉換為 pandas 的 Timestamp 格式
+                    df.drop(labels=[last_datetime], inplace=True)
+                    df.reset_index(inplace=True)  # 還原索引，如果需要的話
+                    df_real = df_real.iloc[-1]
+                    new_row = {
+                        'datetime': df_real['ts'],
+                        'open': df_real['Open'],
+                        'high': df_real['High'],
+                        'low': df_real['Low'],
+                        'close': df_real['Close'],
+                        'volume': df_real['Volume']
+                    }
+                    df.loc[len(df)] = new_row
+                    df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path), date_format='%Y-%m-%d %H:%M:%S')
+                    
     def convert_k_bar(self,minutes):
         '''
         把1分k轉為n分k，即時歷史共用
@@ -139,7 +163,7 @@ class convertK():
             last_index = pd.to_datetime(last_row.name)
         # 讀取1分k
         df_1k = pd.read_csv(self.min_path)
-        df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
+        df_1k['datetime'] = pd.to_datetime(df_1k['datetime'], format="%Y-%m-%d %H:%M:%S", errors='coerce')
         df_1k.set_index('datetime', inplace=True)
         if set(['close', 'high', 'low', 'open', 'volume']).issubset(df_1k.columns):
             hlc_dict = {
@@ -177,3 +201,14 @@ class convertK():
             resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
             resampled_df.index = resampled_df.index.strftime("%Y-%m-%d %H:%M:%S")
             resampled_df.to_csv(file_path, mode='a', header=False)
+            
+    def get_last_close(self):
+        '''
+        取得最後一筆收盤價
+        '''
+        df_real = pd.DataFrame({**self.tick})
+        if not df_real.empty:
+            df_real = df_real.iloc[-1]
+            return int(df_real.Close)
+        else:
+            return None
