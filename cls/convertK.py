@@ -131,23 +131,9 @@ class convertK():
                             df = pd.DataFrame(dict)
                             df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path), date_format='%Y-%m-%d %H:%M:%S')
                 else:
-                    # 刪除最後一筆資料後重新寫入(update)
-                    df = pd.read_csv(self.min_path, parse_dates=[0])
-                    df.set_index('datetime', inplace=True)  # 假設 'datetime' 是索引標籤的欄位名稱
-                    last_datetime = pd.Timestamp(last_datetime)  # 將 last_datetime 轉換為 pandas 的 Timestamp 格式
-                    df.drop(labels=[last_datetime], inplace=True)
-                    df.reset_index(inplace=True)  # 還原索引，如果需要的話
-                    df_real = df_real.iloc[-1]
-                    new_row = {
-                        'datetime': df_real['ts'],
-                        'open': df_real['Open'],
-                        'high': df_real['High'],
-                        'low': df_real['Low'],
-                        'close': df_real['Close'],
-                        'volume': df_real['Volume']
-                    }
-                    df.loc[len(df)] = new_row
-                    df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path), date_format='%Y-%m-%d %H:%M:%S')
+                    df = pd.read_csv(self.min_path)
+                    df = df.drop(df.index[-1])
+                    df.to_csv(self.min_path, index=False)
                     
     def convert_k_bar(self,minutes):
         '''
