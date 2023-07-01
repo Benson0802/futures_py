@@ -7,6 +7,7 @@ import numpy as np
 from dateutil.relativedelta import relativedelta
 import globals
 import logging
+import datetime
 
 class convertK():
     '''
@@ -65,8 +66,8 @@ class convertK():
         '''
         #讀取日k最後一筆
         localtime = time.localtime()
-        tomorrow_date = (datetime.now()+relativedelta(days=1)).strftime("%Y-%m-%d")
-        today = datetime.now().strftime("%Y-%m-%d")
+        tomorrow_date = (datetime.datetime.now()+relativedelta(days=1)).strftime("%Y-%m-%d")
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
         now_time = time.strftime("%H:%M:%S", localtime)
         file_path = os.path.join('data', '1Day.csv')
         df_day = pd.read_csv(file_path, index_col='datetime')
@@ -118,6 +119,9 @@ class convertK():
             # 有資料時判斷最後一筆是否重覆，有重覆就刪掉重新寫入
             if not df_real.empty:
                 if last_datetime != df_real.ts.iloc[-1]:
+                    current_time = datetime.datetime.now().time().replace(second=0, microsecond=0)
+                    if current_time != datetime.time(hour=5, minute=0) and current_time != datetime.time(hour=13, minute=45):
+                        df_real = df_real.drop(df_real.index[-1])
                     for index, row in df_real.iterrows():
                         # 取得每一行的資料
                         ts = row['ts']
@@ -130,10 +134,6 @@ class convertK():
                             dict = {'datetime': ts, 'open': o, 'high': h, 'low': l, 'close': c, 'volume': v}
                             df = pd.DataFrame(dict)
                             df.to_csv(self.min_path, mode='a', index=False, header=not os.path.exists(self.min_path), date_format='%Y-%m-%d %H:%M:%S')
-                else:
-                    df = pd.read_csv(self.min_path)
-                    df = df.drop(df.index[-1])
-                    df.to_csv(self.min_path, index=False)
                     
     def convert_k_bar(self,minutes):
         '''
