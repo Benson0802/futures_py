@@ -142,12 +142,9 @@ class convertK():
         # 讀取要轉換的檔案中最新的一筆k
         file_path = os.path.join('data', minutes + '.csv')
         df = pd.read_csv(file_path, index_col='datetime')
-        last_row = None
-        last_index = None
-        if not df.empty:
-            last_row = pd.read_csv(file_path, index_col='datetime').iloc[-1]
-            last_index = pd.to_datetime(last_row.name)
-        # 讀取1分k
+        last_row = df.iloc[-1]
+        last_dt = pd.to_datetime(last_row.name)
+        #讀取一分k並合併
         df_1k = pd.read_csv(self.min_path)
         df_1k['datetime'] = pd.to_datetime(df_1k['datetime'], format="%Y-%m-%d %H:%M:%S", errors='coerce')
         df_1k.set_index('datetime', inplace=True)
@@ -166,27 +163,27 @@ class convertK():
                 df1 = df_1k.between_time('08:46', '13:45').resample(rule=minutes, offset='45min', closed='right', label='right').apply(hlc_dict).dropna()
             else:
                 df1 = df_1k.between_time('08:46', '13:45').resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
-                
-            # 篩選15:01到23:59以及00:01到05:00的資料
+                    #     # 篩選15:01到23:59以及00:01到05:00的資料
             df2 = pd.concat([df_1k.between_time('15:01', '23:59',inclusive='left'), df_1k.between_time('00:00', '05:00',inclusive='left')]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
+            # 合依df1及df2
             resampled_df = df2.combine_first(df1)
-            # 過濾掉 last_row 之前的資料
-            if last_row.any():
-                resampled_df = resampled_df.loc[last_index:]
-                # 移除舊的lase資料
-                df = pd.read_csv(file_path, index_col='datetime')
-                last_index = pd.to_datetime(last_row.name)
-                df.index = pd.to_datetime(df.index,format="%Y-%m-%d %H:%M:%S")
-                df.drop(labels=[last_index], inplace=True)
-                df.to_csv(file_path, index_label='datetime',date_format='%Y-%m-%d %H:%M:%S')
-            
-            resampled_df['open'] = pd.Series(resampled_df['open'],dtype='int32')
-            resampled_df['high'] = pd.Series(resampled_df['high'],dtype='int32')
-            resampled_df['low'] = pd.Series(resampled_df['low'],dtype='int32')
-            resampled_df['close'] = pd.Series(resampled_df['close'],dtype='int32')
-            resampled_df['volume'] = pd.Series(resampled_df['volume'],dtype='int32')
-            resampled_df.index = resampled_df.index.strftime("%Y-%m-%d %H:%M:%S")
-            resampled_df.to_csv(file_path, mode='a', header=False)
+            # 取合併後的最後一筆比對時間
+            resampled_last_df = resampled_df.iloc[-1]
+            resampled_last_dt = resampled_last_df.name
+            if resampled_last_dt != last_dt:
+                current_time = datetime.datetime.now().time().replace(second=0, microsecond=0)
+                if current_time != datetime.time(hour=5, minute=0) and current_time != datetime.time(hour=13, minute=45):
+                    resampled_df = resampled_df.drop(resampled_df.index[-1])
+                for ts, row in resampled_df.iterrows():
+                    if last_dt < ts:
+                        o = pd.Series(row['open'], dtype='int32')
+                        h = pd.Series(row['high'], dtype='int32')
+                        l = pd.Series(row['low'], dtype='int32')
+                        c = pd.Series(row['close'], dtype='int32')
+                        v = pd.Series(row['volume'], dtype='int32')
+                        dict = {'datetime': ts, 'open': o, 'high': h, 'low': l, 'close': c, 'volume': v}
+                        df = pd.DataFrame(dict)
+                        df.to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path), date_format='%Y-%m-%d %H:%M:%S')
             
     def get_last_close(self):
         '''
