@@ -16,7 +16,6 @@ globals.initialize()
 obj = check_opening()
 year_mon = obj.get_year_mon()
 globals.code = 'TXF' + str(year_mon['year']) + ('0' if len(str(year_mon['mon'])) == 1 else '') + str(year_mon['mon'])
-globals.today = datetime.datetime.now().date().strftime('%Y-%m-%d')
 
 with open('API_KEY.json', 'r') as f:
     json_data = json.load(f)
@@ -29,28 +28,34 @@ with open('API_KEY.json', 'r') as f:
     
     while (True):
         #改抓kbar
-        kbars = api.kbars(
-            contract=api.Contracts.Futures.TXF.TXFR1,
-            start=globals.today,
-            end=globals.today,
-        )
-        
-        ck = convertK(kbars)
-        ck.write_history_1k_bar()
-        ck.convert_k_bar('5Min')
-        ck.convert_k_bar('15Min')
-        ck.convert_k_bar('30Min')
-        ck.convert_k_bar('60Min')
-        ck.convert_day_k_bar()
-        last_close = ck.get_last_close()
-        if last_close is not None:
-            ord = indicator(last_close)
-            ord.run(5)
-            # tactics = aisle(last_close)
-            # tactics.run(5)
-            # ord = order(last_close)
-            # ord.strategy2(60)
-        time.sleep(10)
+        current_time = datetime.datetime.now()
+        start_time = current_time.replace(hour=8, minute=45)
+        end_time = current_time.replace(hour=13, minute=45)
+        next_day_time = current_time.replace(hour=5, minute=0) + datetime.timedelta(days=1)
+        if start_time <= current_time <= end_time or current_time >= current_time.replace(hour=15, minute=0) or current_time <= next_day_time:
+            globals.today = datetime.datetime.now().date().strftime('%Y-%m-%d')
+            kbars = api.kbars(
+                contract=api.Contracts.Futures.TXF.TXFR1,
+                start=globals.today,
+                end=globals.today,
+            )
+            
+            ck = convertK(kbars)
+            ck.write_history_1k_bar()
+            ck.convert_k_bar('5Min')
+            ck.convert_k_bar('15Min')
+            ck.convert_k_bar('30Min')
+            ck.convert_k_bar('60Min')
+            ck.convert_day_k_bar()
+            last_close = ck.get_last_close()
+            if last_close is not None:
+                ord = indicator(last_close)
+                ord.run(5)
+                # tactics = aisle(last_close)
+                # tactics.run(5)
+                # ord = order(last_close)
+                # ord.strategy2(60)
+            time.sleep(10)
 
 # #開盤時間抓tick
 # api.quote.subscribe(

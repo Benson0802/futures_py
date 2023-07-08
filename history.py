@@ -6,6 +6,7 @@ from cls.order import order
 from cls.tactics.indicator import indicator
 import globals
 import datetime
+import time
 
 with open('API_KEY.json', 'r') as f:
     json_data = json.load(f)
@@ -19,8 +20,8 @@ with open('API_KEY.json', 'r') as f:
 
     kbars = api.kbars(
         contract=api.Contracts.Futures.TXF.TXFR1,
-        start='2023-06-19',
-        end='2023-06-22',
+        start='2023-07-03',
+        end='2023-07-08',
     ) 
     ck = convertK(kbars)
     ck.write_history_1k_bar()
@@ -32,9 +33,10 @@ with open('API_KEY.json', 'r') as f:
 
 # globals.initialize()
 # while (True):
-#     ord = aisle(16905)
+#     ord = aisle(17220)
 #     ord.run(60)
-    # ord = order(17220)
-    # ord.strategy2(5)
-    # ord = indicator(17295)
-    # ord.run(5)
+# #     # ord = order(17220)
+# #     # ord.strategy2(5)
+# #     # ord = indicator(17295)
+# #     # ord.run(5)
+# #     # time.sleep(5)

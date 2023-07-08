@@ -16,6 +16,7 @@ import cls.tools.fibonacci as fib
 import cls.tools.get_pattern as pattern
 from sklearn.linear_model import LinearRegression
 import time
+import logging
 
 class aisle():
     '''
@@ -39,15 +40,13 @@ class aisle():
         self.total_balance = self.df_trade['balance'].sum()  # 總賺賠
         
     def run(self, minute):
+        logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
         trend_line = self.get_trend_data(minute)
         data = self.get_trend_line(trend_line)
         print('支撐壓力 {}'.format(globals.levels))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
         print('現價:'+str(self.close))
-        print('is_break:'+str(globals.is_break))
-        print('is_backtest:'+str(globals.is_backtest))
-        print('aisle_type:'+str(globals.aisle_type))
         
         #改以支壓方式進出場
         level_keys = [key for key in trend_line.columns if key.startswith('level')]
@@ -55,59 +54,29 @@ class aisle():
         if self.has_order == False:# 目前沒單
             for i in range(len(last_values)-1):
                 if last_values[i] <= self.close <= last_values[i+1]:
+                    logging.info(str(last_values[i])+"<="+str(self.close)+"<="+str(last_values[i+1]))
                     lower_value = last_values[i]
                     upper_value = last_values[i+1]
-                    time.sleep(5)
-                    if globals.is_break == False and globals.is_backtest == False: #還沒突破/跌破訊號
-                        if self.close <= lower_value or self.close >= upper_value: 
-                            globals.is_break = True
-                            break
-                    else:
-                        print('沒突破/跌破訊號~等待')
-                    
-                    if globals.is_break == True and globals.is_backtest == False: #已突破/跌破未回測
-                        if self.close >= lower_value or self.close >= upper_value: 
-                            globals.is_backtest = True
-                            return
-                    else:
-                        print('已跌破低點未回測~等待')
+                    print('lower_value:'+str(lower_value))
+                    print('upper_value:'+str(upper_value))
                         
-                    if globals.is_break == True and globals.is_backtest == True: #已突破/跌破已回測
-                        if self.close in range(lower_value - 5, lower_value + 5):#低點做多
-                            self.trade(1, 1)  # 買進多單
-                            self.has_order = True #標記有單
-                            self.break_reset()
-                        elif self.close in range(upper_value - 5, upper_value + 5):#高點做空
-                            self.trade(1, -1)  # 買進空單
-                            self.has_order = True #標記有單
-                            self.break_reset()
-                    else:
-                        print('已跌破+已回測但價格不符合~等待') 
+                    if self.close <= lower_value:#低點做多
+                        logging.debug("if self.close:"+str(self.close)+" in range(lower_value:"+str(lower_value)+" - 5, lower_value:"+str(lower_value)+" + 5)")
+                        self.trade(1, 1)  # 買進多單
+                        self.has_order = True #標記有單
+                    elif self.close >= upper_value:#高點做空
+                        logging.debug("if self.close:"+str(self.close)+" in range(upper_value:"+str(upper_value)+" - 5, upper_value:"+str(upper_value)+" + 5)")
+                        self.trade(1, -1)  # 買進空單
+                        self.has_order = True #標記有單
                         
         else:  # 目前有單 
             self.has_order = self.check_trend_loss(data)
-        
+            
         if globals.has_thread == False:
             globals.has_thread = True
             thread = threading.Thread(
                 target=self.draw_trend, args=(minute, trend_line))
             thread.start()
-    
-    def break_set(self, is_break,direction,aisle_type):
-        '''
-        is_break 是否突破 是:true 否:false
-        direction 突破方向 1多 2空
-        aisle_type 判斷的類型  1上通道 2下通道 3 最高壓力  4最低支撐  5次高壓力 6次低支撐
-        '''
-        globals.is_break = is_break
-        globals.direction = direction
-        globals.aisle_type = aisle_type
-    
-    def break_reset(self):
-        globals.is_break = False #突破訊號復歸
-        globals.is_backtest = False #回測訊號復歸
-        globals.direction = 0 #方向復歸
-        globals.aisle_type = 0 #比較類型復歸
     
     def get_trend_data(self, minute):
         '''
@@ -157,12 +126,11 @@ class aisle():
         #     df_n["level"+str(level)] = level
 
         globals.levels = fib.fibonacci(df)
-
         for level in globals.levels:
             df_n["level"+str(level)] = level
         
         #判斷型態
-        df_n = pattern.get_pattern(df_n)
+        # df_n = pattern.get_pattern(df_n)
         return df_n
 
     def get_trend_line(self, df_n):
@@ -230,6 +198,11 @@ class aisle():
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
+            # #標記雙底
+            # if "double_pattern" in df_n.columns:
+            #     inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Bottom"]
+            #     if not inverse_triangle_points.empty:
+            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='green')
             
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
@@ -239,6 +212,11 @@ class aisle():
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
         ax[1].bar(df_n.index, df_n.volume, width=0.4)
         ax[1].set_title("Volume")
+        
+        # if "double_pattern" in df_n.columns:
+        #     inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Bottom"]
+        #     if not inverse_triangle_points.empty:
+        #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='green')
         
         ani = FuncAnimation(fig, update, interval=60000)
         plt.show()
@@ -279,17 +257,22 @@ class aisle():
         if self.df_trade.empty is False:
             df_trade = self.df_trade.iloc[-1]
             #取得翻亞當目標價
-            df_15Min = self.df_15Min.tail(globals.how).reset_index(drop=False)
-            last = df_15Min.iloc[-2]
-            series = np.array(df_15Min['close'])
-            exits = adam.flip_adam_exit(series)
-            target = int(exits)
-            print('亞當目標價:'+str(target))
+            # df_15Min = self.df_15Min.tail(globals.how).reset_index(drop=False)
+            # last = df_15Min.iloc[-2]
+            # series = np.array(df_15Min['close'])
+            # exits = adam.flip_adam_exit(series)
+            # target = int(exits)
+            # print('亞當目標價:'+str(target))
             if len(df_trade) > 0:
                 if df_trade['type'] == 1:  # 有單時
+                    logging.info('現價:'+str(self.close))
                     if df_trade['lot'] == 1:  # 有多單的處理
                         # 收盤價 < 買進價格-n點
                         if self.close <= (df_trade['price'] - self.loss):
+                            logging.info("if self.close <= (df_trade['price'] - self.loss)")
+                            logging.info("現價"+str(self.close))
+                            logging.info('買入價:'+str(df_trade['price']))
+                            logging.info('多單停損=買入價-停損點:'+str(self.close - df_trade['price']))
                             self.balance = ((self.close - df_trade['price'])*50)-70  # 計算賺賠
                             print('多單停損')
                             self.trade(-1, -1)  # 多單停損
@@ -297,20 +280,29 @@ class aisle():
 
                         # 50點停利
                         if self.close >= (df_trade['price'] + 50):
+                            logging.info("if self.close >= (df_trade['price'] + 50)")
+                            logging.info("現價"+str(self.close))
+                            logging.info('買入價:'+str(df_trade['price']))
+                            logging.info('多單停利=買入價+停利點:'+str(df_trade['price'] + 50))
                             self.balance = ((self.close - df_trade['price'])*50)-70  # 計算賺賠
                             print('多單停利')
                             self.trade(-1, -1)  # 多單停利
                             return False
                             
-
                     elif df_trade['lot'] == -1:  # 空單的處理
                         if (self.close >= (df_trade['price'] + self.loss)):
-                            self.balance = ((df_trade['price'] - self.close)*50)-70  # 計算賺賠
+                            logging.info('買入價:'+str(df_trade['price']))
+                            logging.info('停損點:'+str(self.loss))
+                            logging.info('空單停損=買入價+停損點:'+str(df_trade['price'] + self.loss))
+                            self.balance = ((df_trade['price'] + self.close)*50)-70  # 計算賺賠
                             print('空單停損')
                             self.trade(-1, 1)  # 空單回補
                             return False
 
-                        if self.close <= (df_trade['price'] + 50):
+                        if self.close <= (df_trade['price'] - 50):
+                            logging.info('買入價:'+str(df_trade['price']))
+                            logging.info('停利點:'+str(50))
+                            logging.info('空單停利=買入價+停利點:'+str(df_trade['price'] + 50))
                             self.balance = ((df_trade['price'] - self.close)*50)-70  # 計算賺賠
                             print('空單停利')
                             self.trade(-1, 1)  # 空單停利
