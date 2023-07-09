@@ -56,34 +56,56 @@ class indicator():
         df.rename(columns={'Turnover':'volume'}, inplace = True) 
         ema200 = abstract.SMA(df['close'], 200)
         ema200_slope = np.diff(ema200)  # 計算EMA60的斜率
-        macd, signal, hist = abstract.MACD(df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        # rsi = abstract.RSI(df['close'], 14)
-        # bbnds = abstract.BBANDS(df['close'], timeperiod=20, nbdevup=2.0, nbdevdn=2.0, matype=0)
+        df_last = df.tail(1) #取最後1根k當型態判斷
+        #多方k
+        CDLDRAGONFLYDOJI = abstract.CDLDRAGONFLYDOJI(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # T型十字
+        CDLHAMMER = abstract.CDLHAMMER(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#锤头
+        #空方k
+        CDLGRAVESTONEDOJI = abstract.CDLGRAVESTONEDOJI(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # 墓碑十字/倒T十字
+        CDLINVERTEDHAMMER = abstract.CDLINVERTEDHAMMER(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # 倒锤头
+        CDLSHOOTINGSTAR = abstract.CDLSHOOTINGSTAR(df['open'], df['high'], df['low'], df['close']) #射击之星
+        #多空共用k
+        CDLHANGINGMAN = abstract.CDLHANGINGMAN(df_last['open'], df_last['high'], df_last['low'], df_last['close']) #上吊线
+        CDLLONGLINE = abstract.CDLLONGLINE(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#长蜡烛
+        CDLMARUBOZU = abstract.CDLMARUBOZU(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#實體k無上下引線
+        
         if self.has_order == False:# 目前沒單
-            #20dema斜率向上且穿過200 sema進多單
-            print(self.close)
-            print(int(ema200[-1]) -5)
-            print(int(ema200[-1]) +5)
-            print(int(ema200_slope[-1]))
-            if ema200_slope[-1] > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            #逆向策略抄底
+            if (CDLDRAGONFLYDOJI != 0 or CDLHAMMER != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close < (int(ema200[-1])-100):
                 print("買進多單")
                 self.trade(1, 1)  # 買進多單
                 self.has_order = True #標記有單
-            #20dema斜率向下且穿過200 sema進空單
-            elif ema200_slope[-1] < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            #逆向策略摸頭
+            elif (CDLGRAVESTONEDOJI !=0 or CDLINVERTEDHAMMER !=0 or CDLSHOOTINGSTAR != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close > (int(ema200[-1])+100):
                 print("買進空單")
                 self.trade(1, -1)  # 買進空單
                 self.has_order = True #標記有單
             else:
                 print('都不符合，等待')
+            # #20dema斜率向上且穿過200 sema進多單
+            # print(self.close)
+            # print(int(ema200[-1]) -5)
+            # print(int(ema200[-1]) +5)
+            # print(int(ema200_slope[-1]))
+            # if ema200_slope[-1] > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            #     print("買進多單")
+            #     self.trade(1, 1)  # 買進多單
+            #     self.has_order = True #標記有單
+            # #20dema斜率向下且穿過200 sema進空單
+            # elif ema200_slope[-1] < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            #     print("買進空單")
+            #     self.trade(1, -1)  # 買進空單
+            #     self.has_order = True #標記有單
+            # else:
+            #     print('都不符合，等待')
         else:
             self.has_order = self.check_trend_loss()
             
-        # if globals.has_thread == False:
-        #     globals.has_thread = True
-        #     thread = threading.Thread(
-        #         target=self.draw_trend, args=(minute, df))
-        #     thread.start()
+        if globals.has_thread == False:
+            globals.has_thread = True
+            thread = threading.Thread(
+                target=self.draw_trend, args=(minute, df))
+            thread.start()
         
     def draw_trend(self, minute, df):
         '''
