@@ -70,34 +70,34 @@ class indicator():
         CDLMARUBOZU = abstract.CDLMARUBOZU(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#實體k無上下引線
         
         if self.has_order == False:# 目前沒單
-            #逆向策略抄底
-            if (CDLDRAGONFLYDOJI != 0 or CDLHAMMER != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close < (int(ema200[-1])-100):
-                print("買進多單")
-                self.trade(1, 1)  # 買進多單
-                self.has_order = True #標記有單
-            #逆向策略摸頭
-            elif (CDLGRAVESTONEDOJI !=0 or CDLINVERTEDHAMMER !=0 or CDLSHOOTINGSTAR != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close > (int(ema200[-1])+100):
-                print("買進空單")
-                self.trade(1, -1)  # 買進空單
-                self.has_order = True #標記有單
-            else:
-                print('都不符合，等待')
-            # #20dema斜率向上且穿過200 sema進多單
-            # print(self.close)
-            # print(int(ema200[-1]) -5)
-            # print(int(ema200[-1]) +5)
-            # print(int(ema200_slope[-1]))
-            # if ema200_slope[-1] > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            # #逆向策略抄底
+            # if (CDLDRAGONFLYDOJI != 0 or CDLHAMMER != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close < (int(ema200[-1])-100):
             #     print("買進多單")
             #     self.trade(1, 1)  # 買進多單
             #     self.has_order = True #標記有單
-            # #20dema斜率向下且穿過200 sema進空單
-            # elif ema200_slope[-1] < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            # #逆向策略摸頭
+            # elif (CDLGRAVESTONEDOJI !=0 or CDLINVERTEDHAMMER !=0 or CDLSHOOTINGSTAR != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close > (int(ema200[-1])+100):
             #     print("買進空單")
             #     self.trade(1, -1)  # 買進空單
             #     self.has_order = True #標記有單
             # else:
             #     print('都不符合，等待')
+            #20dema斜率向上且穿過200 sema進多單
+            print(self.close)
+            print(int(ema200[-1]) -5)
+            print(int(ema200[-1]) +5)
+            print(int(ema200_slope[-1]))
+            if ema200_slope[-1] > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+                print("買進多單")
+                self.trade(1, 1)  # 買進多單
+                self.has_order = True #標記有單
+            #20dema斜率向下且穿過200 sema進空單
+            elif ema200_slope[-1] < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+                print("買進空單")
+                self.trade(1, -1)  # 買進空單
+                self.has_order = True #標記有單
+            else:
+                print('都不符合，等待')
         else:
             self.has_order = self.check_trend_loss()
             
@@ -187,8 +187,8 @@ class indicator():
                             return False
 
                         # 50點停利
-                        if self.close >= (df_trade['price'] + 50):
-                            logging.info("多單停利 close"+str(self.close)+">="+str((df_trade['price'] + 50)))
+                        if self.close >= (df_trade['price'] + 100):
+                            logging.info("多單停利 close"+str(self.close)+">="+str((df_trade['price'] + 100)))
                             self.balance = ((self.close - df_trade['price'])*50)-70  # 計算賺賠
                             print('多單停利')
                             self.trade(-1, -1)  # 多單停利
@@ -203,8 +203,8 @@ class indicator():
                             self.trade(-1, 1)  # 空單回補
                             return False
 
-                        if self.close <= (df_trade['price'] - 50):
-                            logging.info("空單停利 close "+str(self.close)+"<="+str((df_trade['price'] - 50)))
+                        if self.close <= (df_trade['price'] - 100):
+                            logging.info("空單停利 close "+str(self.close)+"<="+str((df_trade['price'] - 100)))
                             self.balance = ((df_trade['price'] - self.close)*50)-70  # 計算賺賠
                             print('空單停利')
                             self.trade(-1, 1)  # 空單停利
