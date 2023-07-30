@@ -98,6 +98,9 @@ class aisle():
 
         df_n = df.reset_index()
 
+        #220根k棒的多空分界線
+        df_n['midval'] = (df['high'].max() + df['low'].min())/2
+        
         # 線性回歸計算方式
         reg_up = LinearRegression().fit(df_n.index.to_frame(), df_n["close"])
         up_line = reg_up.intercept_ + reg_up.coef_ * df_n.index
@@ -195,6 +198,7 @@ class aisle():
             ax[0].plot(df_n["close"])
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
+            ax[0].plot(df_n["midval"])
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
@@ -207,6 +211,7 @@ class aisle():
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
+        ax[0].plot(df_n["midval"])
         for level in globals.levels:
             ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
