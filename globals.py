@@ -15,7 +15,7 @@ def initialize():
     volume = 0
     amount = []
     code = ''
-    how = 500
+    how = 220
     levels = None
     pattern = None
     today = None

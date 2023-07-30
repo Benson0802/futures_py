@@ -95,9 +95,9 @@ class order():
         data = self.get_fourier_data(minute)
         print('現價:'+str(self.close))
         print('direction:'+data['trend'])
-        print('entry_price:'+str(data['entry_price']))
-        print('stop_loss:'+str(data['stop_loss']))
-        print('take_profit:'+str(data['take_profit']))
+        print('入場:'+str(data['entry_price']))
+        print('停損:'+str(data['stop_loss']))
+        print('停利:'+str(data['take_profit']))
         
         if globals.has_thread == False:
             thread = threading.Thread(target=self.fourier_draw, args=(minute,data['df'], data['y_predict'], data['n_harmonics'], data['trend'], data['entry_price']))
