@@ -105,12 +105,12 @@ with open('API_KEY.json', 'r') as f:
         else:
             ck.write_1k_bar(globals.tick_min,globals.volume,globals.amount)
             #策略判斷
-            tactics = aisle(tick.close)
-            tactics.run(5)
+            # tactics = aisle(tick.close)
+            # tactics.run(60)
             # ord = order(tick.close)
             # ord.strategy2(5)
-            # ord = indicator(tick.close)
-            # ord.run(5)
+            ord = indicator(tick.close)
+            ord.run(15)
             globals.now_min = None
             globals.amount.clear()
             globals.volume = tick.volume

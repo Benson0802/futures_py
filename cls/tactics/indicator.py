@@ -54,45 +54,34 @@ class indicator():
             df = self.df_1day.tail(globals.how)
 
         df.rename(columns={'Turnover':'volume'}, inplace = True) 
-        ema200 = abstract.SMA(df['close'], 200)
-        ema200_slope = np.diff(ema200)  # 計算EMA60的斜率
-        df_last = df.tail(1) #取最後1根k當型態判斷
-        #多方k
-        CDLDRAGONFLYDOJI = abstract.CDLDRAGONFLYDOJI(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # T型十字
-        CDLHAMMER = abstract.CDLHAMMER(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#锤头
-        #空方k
-        CDLGRAVESTONEDOJI = abstract.CDLGRAVESTONEDOJI(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # 墓碑十字/倒T十字
-        CDLINVERTEDHAMMER = abstract.CDLINVERTEDHAMMER(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # 倒锤头
-        CDLSHOOTINGSTAR = abstract.CDLSHOOTINGSTAR(df['open'], df['high'], df['low'], df['close']) #射击之星
-        #多空共用k
-        CDLHANGINGMAN = abstract.CDLHANGINGMAN(df_last['open'], df_last['high'], df_last['low'], df_last['close']) #上吊线
-        CDLLONGLINE = abstract.CDLLONGLINE(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#长蜡烛
-        CDLMARUBOZU = abstract.CDLMARUBOZU(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#實體k無上下引線
+        BBAND20 = abstract.BBANDS(df, timeperiod=20, nbdevup=3.0, nbdevdn=3.0, matype=2)
+
+        # ema200 = abstract.SMA(df['close'], 200)
+        # ema200_slope = np.diff(ema200)  # 計算EMA60的斜率
+        # df_last = df.tail(1) #取最後1根k當型態判斷
+        # #多方k
+        # CDLDRAGONFLYDOJI = abstract.CDLDRAGONFLYDOJI(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # T型十字
+        # CDLHAMMER = abstract.CDLHAMMER(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#锤头
+        # #空方k
+        # CDLGRAVESTONEDOJI = abstract.CDLGRAVESTONEDOJI(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # 墓碑十字/倒T十字
+        # CDLINVERTEDHAMMER = abstract.CDLINVERTEDHAMMER(df_last['open'], df_last['high'], df_last['low'], df_last['close']) # 倒锤头
+        # CDLSHOOTINGSTAR = abstract.CDLSHOOTINGSTAR(df['open'], df['high'], df['low'], df['close']) #射击之星
+        # #多空共用k
+        # CDLHANGINGMAN = abstract.CDLHANGINGMAN(df_last['open'], df_last['high'], df_last['low'], df_last['close']) #上吊线
+        # CDLLONGLINE = abstract.CDLLONGLINE(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#长蜡烛
+        # CDLMARUBOZU = abstract.CDLMARUBOZU(df_last['open'], df_last['high'], df_last['low'], df_last['close'])#實體k無上下引線
+        
+        # 改用布林
         
         if self.has_order == False:# 目前沒單
-            # #逆向策略抄底
-            # if (CDLDRAGONFLYDOJI != 0 or CDLHAMMER != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close < (int(ema200[-1])-100):
-            #     print("買進多單")
-            #     self.trade(1, 1)  # 買進多單
-            #     self.has_order = True #標記有單
-            # #逆向策略摸頭
-            # elif (CDLGRAVESTONEDOJI !=0 or CDLINVERTEDHAMMER !=0 or CDLSHOOTINGSTAR != 0 or CDLHANGINGMAN != 0 or CDLLONGLINE != 0 or CDLMARUBOZU != 0) and self.close > (int(ema200[-1])+100):
-            #     print("買進空單")
-            #     self.trade(1, -1)  # 買進空單
-            #     self.has_order = True #標記有單
-            # else:
-            #     print('都不符合，等待')
-            #20dema斜率向上且穿過200 sema進多單
             print(self.close)
-            print(int(ema200[-1]) -5)
-            print(int(ema200[-1]) +5)
-            print(int(ema200_slope[-1]))
-            if ema200_slope[-1] > 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            print(BBAND20.iloc[-1])
+            if self.close <= BBAND20.iloc[-1]['upperband']:
                 print("買進多單")
                 self.trade(1, 1)  # 買進多單
                 self.has_order = True #標記有單
             #20dema斜率向下且穿過200 sema進空單
-            elif ema200_slope[-1] < 0 and self.close in range(int(ema200[-1])-5, int(ema200[-1]) +5):
+            elif self.close >=  0 and BBAND20.iloc[-1]['lowerband']:
                 print("買進空單")
                 self.trade(1, -1)  # 買進空單
                 self.has_order = True #標記有單
