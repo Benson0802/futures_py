@@ -17,6 +17,7 @@ import cls.tools.get_pattern as pattern
 from sklearn.linear_model import LinearRegression
 import time
 import logging
+from talib import abstract
 
 class aisle():
     '''
@@ -46,28 +47,39 @@ class aisle():
         print('支撐壓力 {}'.format(globals.levels))
         print('上線段預測價格:'+str(data['forecast_high']))
         print('下線段預測價格:'+str(data['forecast_low']))
+        print('多空分界線:'+str(trend_line['midval']))
         print('現價:'+str(self.close))
         
         #改以支壓方式進出場
         level_keys = [key for key in trend_line.columns if key.startswith('level')]
         last_values = [trend_line[key].iloc[-1] for key in level_keys]
         if self.has_order == False:# 目前沒單
-            for i in range(len(last_values)-1):
-                if last_values[i] <= self.close <= last_values[i+1]:
-                    logging.info(str(last_values[i])+"<="+str(self.close)+"<="+str(last_values[i+1]))
-                    lower_value = last_values[i]
-                    upper_value = last_values[i+1]
-                    print('lower_value:'+str(lower_value))
-                    print('upper_value:'+str(upper_value))
-                        
-                    if self.close <= lower_value:#低點做多
-                        logging.debug("if self.close:"+str(self.close)+" in range(lower_value:"+str(lower_value)+" - 5, lower_value:"+str(lower_value)+" + 5)")
-                        self.trade(1, 1)  # 買進多單
-                        self.has_order = True #標記有單
-                    elif self.close >= upper_value:#高點做空
-                        logging.debug("if self.close:"+str(self.close)+" in range(upper_value:"+str(upper_value)+" - 5, upper_value:"+str(upper_value)+" + 5)")
-                        self.trade(1, -1)  # 買進空單
-                        self.has_order = True #標記有單
+            if self.close >= last_values[len(last_values)-1]:#最高點
+                # if trend_line["CDLGRAVESTONEDOJI"] > 0 or trend_line["CDLINVERTEDHAMMER"] > 0 or trend_line["CDLSHOOTINGSTAR"] > 0:
+                # logging.debug("if self.close:"+str(self.close)+" in range(upper_value:"+str(upper_value)+" - 5, upper_value:"+str(upper_value)+" + 5)")
+                self.trade(1, -1)  # 買進空單
+                self.has_order = True #標記有單
+            elif self.close <= last_values[-1]:#最低點
+                # if trend_line["CDLDRAGONFLYDOJI"] > 0 or trend_line["CDLHAMMER"]:
+                # logging.debug("if self.close:"+str(self.close)+" in range(lower_value:"+str(lower_value)+" - 5, lower_value:"+str(lower_value)+" + 5)")
+                self.trade(1, 1)  # 買進多單
+                self.has_order = True #標記有單
+            else:
+                for i in range(len(last_values)-1):
+                    if last_values[i] <= self.close <= last_values[i+1]:
+                        # logging.info(str(last_values[i])+"<="+str(self.close)+"<="+str(last_values[i+1]))
+                        lower_value = last_values[i]
+                        upper_value = last_values[i+1]
+                        if self.close <= lower_value:#低點做多
+                            # if trend_line["CDLDRAGONFLYDOJI"] > 0 or trend_line["CDLHAMMER"]:
+                            # logging.debug("if self.close:"+str(self.close)+" in range(lower_value:"+str(lower_value)+" - 5, lower_value:"+str(lower_value)+" + 5)")
+                            self.trade(1, 1)  # 買進多單
+                            self.has_order = True #標記有單
+                        elif self.close >= upper_value:#高點做空
+                            # if trend_line["CDLGRAVESTONEDOJI"] > 0 or trend_line["CDLINVERTEDHAMMER"] > 0 or trend_line["CDLSHOOTINGSTAR"] > 0:
+                            # logging.debug("if self.close:"+str(self.close)+" in range(upper_value:"+str(upper_value)+" - 5, upper_value:"+str(upper_value)+" + 5)")
+                            self.trade(1, -1)  # 買進空單
+                            self.has_order = True #標記有單
                         
         else:  # 目前有單 
             self.has_order = self.check_trend_loss(data)
@@ -97,7 +109,7 @@ class aisle():
             df = self.df_1day.tail(globals.how).reset_index(drop=False)
 
         df_n = df.reset_index()
-
+        df_last = df_n.tail(1).reset_index() #取最後1根k當型態判斷
         #220根k棒的多空分界線
         df_n['midval'] = (df['high'].max() + df['low'].min())/2
         
@@ -120,6 +132,14 @@ class aisle():
         df_n["low_trend"] = (reg_low.intercept_ + reg_low.coef_ * pd.Series(df_n.index)).round().astype(int)
         df_n["high_trend"] = (reg_high.intercept_ + reg_high.coef_ * pd.Series(df_n.index)).round().astype(int)
         
+        df_last["body"] = abs(df_last['open'] - df_last['close'])# 計算實體部分的長度
+        df_last['upper_wick'] = df_last['high'] - df_last[['open', 'close']].max(axis=1)# 計算上引線的長度
+        df_last['lower_wick'] = df_last[['open', 'close']].min(axis=1) - df_last['low']# 計算下引線的長度
+        # 判斷前一根K棒是上引線或下引線
+        # 如果上引線長度大於實體部分和下引線的長度，則是上引線
+        # 如果下引線長度大於實體部分和上引線的長度，則是下引線
+        # 如果都不符合，則是其他型態
+        wick_type= df_last.apply(lambda row: 'upper' if row['upper_wick'] > row['body'] + row['lower_wick'] else ('lower' if row['lower_wick'] > row['body'] + row['upper_wick'] else 'other'), axis=1)
         # #取得支撐壓力
         # df['datetime'] = pd.to_datetime(df_n['datetime'])
         # df.set_index(['datetime'], inplace=True)
@@ -199,6 +219,7 @@ class aisle():
             ax[0].plot(df_n["low_trend"])
             ax[0].plot(df_n["high_trend"])
             ax[0].plot(df_n["midval"])
+        
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
@@ -212,6 +233,7 @@ class aisle():
         ax[0].plot(df_n["low_trend"])
         ax[0].plot(df_n["high_trend"])
         ax[0].plot(df_n["midval"])
+        
         for level in globals.levels:
             ax[0].plot(df_n["level"+str(level)],linestyle='dashed',label=str(level))
         ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
