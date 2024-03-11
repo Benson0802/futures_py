@@ -126,7 +126,6 @@ class convertK():
                         # 取得每一行的資料
                         ts = row['ts']
                         if last_datetime < ts:
-                            print(123)
                             o = pd.Series(row['Open'], dtype='int32')
                             h = pd.Series(row['High'], dtype='int32')
                             l = pd.Series(row['Low'], dtype='int32')
