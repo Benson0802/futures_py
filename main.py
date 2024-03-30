@@ -26,40 +26,6 @@ with open('API_KEY.json', 'r') as f:
         secret_key=json_data['secret_key'],
         contracts_cb=lambda security_type: print(f"{repr(security_type)} fetch done.")
     )
-    
-    # while (True):
-    #     #改抓kbar
-    #     current_time = datetime.datetime.now()
-    #     start_time = current_time.replace(hour=8, minute=45)
-    #     end_time = current_time.replace(hour=13, minute=45)
-    #     next_day_time = current_time.replace(hour=5, minute=0) + datetime.timedelta(days=1)
-    #     if start_time <= current_time <= end_time or current_time >= current_time.replace(hour=15, minute=0) or current_time <= next_day_time:
-    #         globals.today = datetime.datetime.now().date().strftime('%Y-%m-%d')
-    #         logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
-    #         logging.info(current_time)
-    #         kbars = api.kbars(
-    #             contract=api.Contracts.Futures.TXF.TXFR1,
-    #             start=globals.today,
-    #             end=globals.today,
-    #             timeout = 30000
-    #         )
-            
-    #         ck = convertK(kbars)
-    #         ck.write_history_1k_bar()
-    #         ck.convert_k_bar('5Min')
-    #         ck.convert_k_bar('15Min')
-    #         ck.convert_k_bar('30Min')
-    #         ck.convert_k_bar('60Min')
-    #         ck.convert_day_k_bar()
-    #         last_close = ck.get_last_close()
-    #         if last_close is not None:
-    #             ord = indicator(last_close)
-    #             ord.run(5)
-    #             # tactics = aisle(last_close)
-    #             # tactics.run(5)
-    #             # ord = order(last_close)
-    #             # ord.strategy2(60)
-    #         time.sleep(10)
 
     #開盤時間抓tick
     api.quote.subscribe(
