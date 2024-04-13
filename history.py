@@ -21,7 +21,7 @@ with open('API_KEY.json', 'r') as f:
     kbars = api.kbars(
         contract=api.Contracts.Futures.TXF.TXFR1,
         start='2024-03-25',
-        end='2024-03-30',
+        end='2024-04-13',
     ) 
     ck = convertK(kbars)
     ck.write_history_1k_bar()

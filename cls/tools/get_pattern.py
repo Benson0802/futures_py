@@ -30,7 +30,7 @@ def get_pattern(df_n):
     detect_trendline 趨勢線支撐和阻力：這些模式表明市場可能根據歷史價格行為經歷支撐或阻力的關鍵水平。(不能用，完全不準)
     find_pivots 尋找更高的高點和更低的低點(可以用但不好判斷)
     '''
-    df_n = detect_head_shoulder(df_n)
+    # df_n = detect_head_shoulder(df_n)
     # df_n = detect_multiple_tops_bottoms(df_n)
     # df_n = calculate_support_resistance(df_n) 棄用
     # df_n = detect_triangle_pattern(df_n)

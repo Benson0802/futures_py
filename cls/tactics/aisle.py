@@ -153,7 +153,7 @@ class aisle():
             df_n["level"+str(level)] = level
         
         #判斷型態
-        # df_n = pattern.get_pattern(df_n)
+        df_n = pattern.get_pattern(df_n)
         return df_n
 
     def get_trend_line(self, df_n):
@@ -223,11 +223,11 @@ class aisle():
             ax[0].set_title(str(globals.code)+"-"+str(minute)+'Min')
             ax[1].bar(df_n.index, df_n.volume, width=0.4)
             ax[1].set_title("Volume")
-            # #標記雙底
-            # if "double_pattern" in df_n.columns:
-            #     inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Bottom"]
-            #     if not inverse_triangle_points.empty:
-            #         ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='green')
+            #標記雙底
+            if "double_pattern" in df_n.columns:
+                inverse_triangle_points = df_n[df_n['double_pattern'] == "Double Bottom"]
+                if not inverse_triangle_points.empty:
+                    ax[0].plot(inverse_triangle_points.index, inverse_triangle_points['close'], marker='*', linestyle='None', markersize=8, color='green')
             
         ax[0].plot(df_n["close"])
         ax[0].plot(df_n["low_trend"])
