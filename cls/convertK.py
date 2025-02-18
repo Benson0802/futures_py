@@ -100,10 +100,15 @@ class convertK():
         '''
         df_real = pd.DataFrame({**self.tick})
         df_real.ts = pd.to_datetime(df_real.ts)
+        
+        # 過濾掉重複的資料
+        df_real = df_real.drop_duplicates(subset='ts', keep='last')
+        
         num_rows = sum(1 for line in open(self.min_path))
         df_1k = pd.read_csv(self.min_path, skiprows=num_rows-1, header=None, parse_dates=[0])
         df_1k.columns = ['datetime', 'open', 'high', 'low', 'close', 'volume']
         df_1k['datetime'] = pd.to_datetime(df_1k['datetime'])
+        
         # 沒任何資料時直接寫入
         if df_1k.empty and len(df_1k) == 0:
             o = pd.Series(df_real.Open, dtype='int32')
@@ -121,7 +126,7 @@ class convertK():
                 if last_datetime != df_real.ts.iloc[-1]:
                     current_time = datetime.datetime.now().time().replace(second=0, microsecond=0)
                     if current_time != datetime.time(hour=5, minute=0) and current_time != datetime.time(hour=13, minute=45):
-                        df_real = df_real.drop(df_real.index[-1])
+                        df_real = df_real[df_real.ts > last_datetime]
                     for index, row in df_real.iterrows():
                         # 取得每一行的資料
                         ts = row['ts']
