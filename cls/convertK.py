@@ -168,8 +168,11 @@ class convertK():
                 df1 = df_1k.between_time('08:46', '13:45').resample(rule=minutes, offset='45min', closed='right', label='right').apply(hlc_dict).dropna()
             else:
                 df1 = df_1k.between_time('08:46', '13:45').resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
-                    #     # 篩選15:01到23:59以及00:01到05:00的資料
-            df2 = pd.concat([df_1k.between_time('15:01', '23:59',inclusive='left'), df_1k.between_time('00:00', '05:00',inclusive='left')]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
+            # 篩選15:01到23:59以及00:01到05:00的資料
+            df2 = pd.concat([
+                df_1k.between_time('15:01', '23:59', inclusive='left'),
+                df_1k.between_time('00:00', '05:00', inclusive='right')
+            ]).resample(rule=minutes, closed='right', label='right').apply(hlc_dict).dropna()
             # 合依df1及df2
             resampled_df = df2.combine_first(df1)
             # 取合併後的最後一筆比對時間
@@ -178,7 +181,9 @@ class convertK():
             if resampled_last_dt != last_dt:
                 current_time = datetime.datetime.now().time().replace(second=0, microsecond=0)
                 if current_time != datetime.time(hour=5, minute=0) and current_time != datetime.time(hour=13, minute=45):
-                    resampled_df = resampled_df.drop(resampled_df.index[-1])
+                    if resampled_df.index[-1].time() != datetime.time(hour=5, minute=0) and resampled_df.index[-1].time() != datetime.time(hour=13, minute=45):
+                        resampled_df = resampled_df.drop(resampled_df.index[-1])
+                        
                 for ts, row in resampled_df.iterrows():
                     if last_dt < ts:
                         o = pd.Series(row['open'], dtype='int32')
@@ -189,7 +194,7 @@ class convertK():
                         dict = {'datetime': ts, 'open': o, 'high': h, 'low': l, 'close': c, 'volume': v}
                         df = pd.DataFrame(dict)
                         df.to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path), date_format='%Y-%m-%d %H:%M:%S')
-            
+
     def get_last_close(self):
         '''
         取得最後一筆收盤價
